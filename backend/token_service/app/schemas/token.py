@@ -20,6 +20,18 @@ class RevokeTokenRequest(BaseModel):
     token_id: UUID
 
 
+class ValidateTokenRequest(BaseModel):
+    token: str
+
+
+class ValidateTokenResponse(BaseModel):
+    valid: bool
+    status: str  # "active" | "revoked"
+    subject: str
+    scopes: list[str]
+    jti: str
+
+
 class RevokeTokenResponse(BaseModel):
     success: bool = True
 

@@ -63,7 +63,11 @@ uvicorn app.main:app --reload
 
 ## API Endpoints
 
-All endpoints require API key via `X-API-Key` header or `Authorization: Bearer <key>`.
+### Public (no auth)
+
+- **GET /keys** — JSON Web Key Set (JWKS) for JWT verification. Used by enforcement SDK.
+
+### Protected (API key via `X-API-Key` or `Authorization: Bearer <key>`)
 
 ### Mint token
 
@@ -93,6 +97,21 @@ curl http://localhost:8000/tokens/{token_id} \
 ```
 
 Returns metadata (id, subject, scopes, issued_at, expires_at, status) — no raw token value.
+
+### Validate token
+
+```bash
+curl -X POST http://localhost:8000/tokens/validate \
+  -H "X-API-Key: your-secret-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "eyJ..."}'
+```
+
+Returns `{ "valid": bool, "status": "active"|"revoked", "subject": str, "scopes": [...], "jti": str }`.
+
+### WebSocket: Revocation push
+
+Connect to `ws://localhost:8000/ws/revocations` to receive real-time revocation events. On revoke, clients receive `{ "token_id": "uuid", "event": "revoked" }`.
 
 ## Key Rotation
 
