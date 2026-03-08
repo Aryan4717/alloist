@@ -1,6 +1,8 @@
 from uuid import UUID
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, verify_api_key
 from app.schemas.token import (
@@ -9,15 +11,17 @@ from app.schemas.token import (
     RevokeTokenRequest,
     RevokeTokenResponse,
     TokenMetadataResponse,
+    ValidateTokenRequest,
+    ValidateTokenResponse,
 )
 from app.services.token_service import (
-    TokenNotFoundError,
     NoActiveSigningKeyError,
+    TokenNotFoundError,
     get_token_metadata,
     mint_token,
     revoke_token,
 )
-from sqlalchemy.orm import Session
+from app.ws_manager import revocation_broadcaster
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
 
@@ -45,12 +49,12 @@ def create_token(
 
 
 @router.post("/revoke", response_model=RevokeTokenResponse)
-def revoke_token_endpoint(
+async def revoke_token_endpoint(
     body: RevokeTokenRequest,
     _: None = Depends(verify_api_key),
     db: Session = Depends(get_db),
 ) -> RevokeTokenResponse:
-    """Revoke a token by id."""
+    """Revoke a token by id. Broadcasts to WebSocket clients."""
     try:
         revoke_token(db, body.token_id)
     except TokenNotFoundError as e:
@@ -58,7 +62,46 @@ def revoke_token_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+    await revocation_broadcaster.broadcast_revocation(str(body.token_id))
     return RevokeTokenResponse(success=True)
+
+
+@router.post("/validate", response_model=ValidateTokenResponse)
+def validate_token(
+    body: ValidateTokenRequest,
+    _: None = Depends(verify_api_key),
+    db: Session = Depends(get_db),
+) -> ValidateTokenResponse:
+    """Validate token: verify signature, check DB status. Returns valid, status, subject, scopes, jti."""
+    from app.services.signing_service import verify_token
+
+    try:
+        payload = verify_token(db, body.token)
+    except jwt.InvalidTokenError:
+        return ValidateTokenResponse(
+            valid=False,
+            status="revoked",
+            subject="",
+            scopes=[],
+            jti="",
+        )
+    jti = payload.get("jti", "")
+    token_row = get_token_metadata(db, UUID(jti)) if jti else None
+    if not token_row:
+        return ValidateTokenResponse(
+            valid=False,
+            status="revoked",
+            subject=payload.get("sub", ""),
+            scopes=payload.get("scopes", []),
+            jti=jti,
+        )
+    return ValidateTokenResponse(
+        valid=token_row.status.value == "active",
+        status=token_row.status.value,
+        subject=token_row.subject,
+        scopes=token_row.scopes,
+        jti=jti,
+    )
 
 
 @router.get("/{token_id}", response_model=TokenMetadataResponse)
