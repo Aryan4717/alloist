@@ -30,32 +30,46 @@ jobs:
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8000/keys > /dev/null; then
               echo "Token service ready"
-              break
+              exit 0
             fi
             sleep 2
           done
+          echo "Token service failed to start"
+          exit 1
 
       - name: Create signing key
         run: |
           cd backend/token_service
           docker compose run --rm -T --entrypoint "" token_service sh -c "alembic upgrade head && python -m app.cli.rotate_key"
 
+      - name: Verify mint works
+        run: |
+          curl -sf -X POST http://localhost:8000/tokens \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: dev-api-key" \
+            -d '{"subject":"smoke","scopes":["read"],"ttl_seconds":60}' \
+            | grep -q token_id && echo "Mint OK" || (echo "Mint failed"; exit 1)
+
       - name: Install benchmark deps
         run: |
           pip install -r benchmarks/requirements.txt
           pip install -e packages/enforcement_py
 
+      - name: Verify token service before benchmarks
+        run: |
+          curl -sf http://localhost:8000/keys > /dev/null || (echo "Token service down before benchmarks"; cd backend/token_service && docker compose ps -a; exit 1)
+
       - name: Run revoke latency benchmark
         run: |
           cd benchmarks
           python revoke_latency.py --host http://localhost:8000 --clients 20 --connect-wait 5 --api-key dev-api-key --output revoke_result.json || true
-          cat revoke_result.json
+          cat revoke_result.json 2>/dev/null || echo '{"error":"no output"}'
 
       - name: Run agent throughput benchmark
         run: |
           cd benchmarks
           python agent_throughput.py --host http://localhost:8000 --workers 20 --duration 5 --api-key dev-api-key --output agent_result.json || true
-          cat agent_result.json
+          cat agent_result.json 2>/dev/null || echo '{"error":"no output"}'
 
       - name: Assert thresholds and output metrics
         run: |
@@ -110,8 +124,22 @@ jobs:
           sys.exit(1 if fail else 0)
           PYEOF
 
+      - name: Prepare perf results for upload
+        if: always()
+        run: |
+          mkdir -p benchmarks
+          [ -f benchmarks/perf_results.json ] || echo '{"revoke":{"error":"assert_never_ran"},"agent":{"error":"assert_never_ran"}}' > benchmarks/perf_results.json
+
       - name: Upload perf results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: perf-results
           path: benchmarks/perf_results.json
+
+      - name: Debug on failure
+        if: failure()
+        run: |
+          cd backend/token_service
+          docker compose ps -a
+          docker compose logs token_service --tail 50

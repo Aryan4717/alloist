@@ -17,6 +17,7 @@ services:
 
   token_service:
     build: .
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
       TOKEN_SERVICE_API_KEY: ${TOKEN_SERVICE_API_KEY:-dev-api-key}
