@@ -26,6 +26,7 @@ class CreatePolicyRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: str | None = None
     rules: dict[str, Any] = Field(...)
+    dsl: dict[str, Any] | None = None
 
 
 class PolicyResponse(BaseModel):
@@ -35,4 +36,5 @@ class PolicyResponse(BaseModel):
     name: str
     description: str | None
     rules: dict[str, Any]
+    dsl: dict[str, Any] | None = None
     created_at: datetime

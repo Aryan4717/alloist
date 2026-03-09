@@ -29,7 +29,20 @@ export interface Policy {
   name: string;
   description: string | null;
   rules: Record<string, unknown>;
+  dsl?: Record<string, unknown> | null;
   created_at: string;
+}
+
+export interface DslRule {
+  id: string;
+  description?: string;
+  conditions: string[];
+  effect: "allow" | "deny";
+}
+
+export interface CompileDslResponse {
+  rules: Record<string, unknown> | null;
+  errors: string[] | null;
 }
 
 export interface EvidenceItem {
@@ -107,7 +120,12 @@ export async function listPolicies(apiKey: string): Promise<Policy[]> {
 
 export async function createPolicy(
   apiKey: string,
-  body: { name: string; description?: string; rules: Record<string, unknown> }
+  body: {
+    name: string;
+    description?: string;
+    rules: Record<string, unknown>;
+    dsl?: Record<string, unknown>;
+  }
 ): Promise<Policy> {
   const res = await fetch(`${POLICY_URL}/policy`, {
     method: "POST",
@@ -121,12 +139,30 @@ export async function createPolicy(
 export async function updatePolicy(
   apiKey: string,
   id: string,
-  body: { name: string; description?: string; rules: Record<string, unknown> }
+  body: {
+    name: string;
+    description?: string;
+    rules: Record<string, unknown>;
+    dsl?: Record<string, unknown>;
+  }
 ): Promise<Policy> {
   const res = await fetch(`${POLICY_URL}/policy/${id}`, {
     method: "PUT",
     headers: headers(apiKey),
     body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function compilePolicyDsl(
+  apiKey: string,
+  payload: { rules: DslRule[] }
+): Promise<CompileDslResponse> {
+  const res = await fetch(`${POLICY_URL}/policy/compile_dsl`, {
+    method: "POST",
+    headers: headers(apiKey),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

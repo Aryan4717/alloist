@@ -4,12 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, verify_api_key
+from app.dsl.compiler import compile_document
 from app.schemas.policy import (
     CreatePolicyRequest,
     EvaluateRequest,
     EvaluateResponse,
     PolicyResponse,
 )
+from app.schemas.policy_dsl import CompileDslRequest, CompileDslResponse
 from app.services.evaluator import evaluate
 from app.models.policy import Policy
 
@@ -39,6 +41,21 @@ def evaluate_policy(
     )
 
 
+@router.post("/compile_dsl", response_model=CompileDslResponse)
+def compile_dsl(
+    body: CompileDslRequest,
+    _: None = Depends(verify_api_key),
+) -> CompileDslResponse:
+    """Compile DSL rules into evaluator rules. Returns compiled rules or errors."""
+    try:
+        compiled, errors = compile_document(body.rules)
+        if errors:
+            return CompileDslResponse(rules=None, errors=errors)
+        return CompileDslResponse(rules=compiled, errors=None)
+    except Exception as e:
+        return CompileDslResponse(rules=None, errors=[str(e)])
+
+
 @router.post("", response_model=PolicyResponse)
 def create_policy(
     body: CreatePolicyRequest,
@@ -50,6 +67,7 @@ def create_policy(
         name=body.name,
         description=body.description,
         rules=body.rules,
+        dsl=body.dsl,
     )
     db.add(policy)
     db.commit()
@@ -84,6 +102,7 @@ def update_policy(
     policy.name = body.name
     policy.description = body.description
     policy.rules = body.rules
+    policy.dsl = body.dsl
     db.commit()
     db.refresh(policy)
     return PolicyResponse.model_validate(policy)

@@ -37,9 +37,30 @@ Open http://localhost:3000. Enter your API key (e.g. `dev-api-key`) when prompte
 ## Pages
 
 - **Tokens** – Create and revoke capability tokens
-- **Policies** – Create, edit, delete policies; use templates (stripe_high_value_block, gmail_external_send_deny, github_merge_block_without_review)
+- **Policies** – Create, edit, delete policies; use templates or write policies in DSL (declarative YAML/JSON) or raw JSON
 - **Live Actions** – Stream of enforcement events (evidence), auto-refresh every 5s
 - **Evidence Exports** – Download signed evidence bundles
+
+## Policy DSL
+
+Policies can be written in a small declarative DSL. Example:
+
+```json
+[
+  {
+    "id": "stripe_high_value",
+    "description": "Block charges > 1000",
+    "conditions": [
+      "action.service == \"stripe\"",
+      "action.name == \"charge\"",
+      "metadata.amount > 1000"
+    ],
+    "effect": "deny"
+  }
+]
+```
+
+Supported expressions: `action.service == "x"`, `action.name == "y"`, `metadata.field > value`, `"scope" in token.scopes`. Use "Validate DSL" before saving.
 
 ## Quickstart
 
