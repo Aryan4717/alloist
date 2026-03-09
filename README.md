@@ -15,6 +15,8 @@ Alloist gates AI agent actions (e.g., send email, charge payment) using:
 
 ```
 alloist/
+├── apps/
+│   └── admin/              # Next.js admin UI (Phase 3)
 ├── backend/
 │   ├── token_service/       # Mints tokens, revocation, JWKS (port 8000)
 │   ├── policy_service/      # Policy evaluation, evidence export (port 8001)
@@ -47,3 +49,18 @@ Phase 2 adds fail-closed modes, revocation push (Redis), and scale/perf testing.
 - 2.2 Revocation push system (Redis pub/sub)
 - 2.3 Scale & perf benchmarking
 - Full testing checklist
+
+## Phase 3
+
+Phase 3 adds a Next.js admin console for policies, tokens, and evidence.
+
+**Admin UI** (`apps/admin/`):
+- Tokens list (create/revoke)
+- Policies list (create/edit/delete) with template library
+- Live Actions (enforcement events stream)
+- Evidence exports (download signed bundles)
+- Quickstart overlay (5-minute demo guide)
+
+```bash
+cd apps/admin && npm run dev
+```

@@ -10,6 +10,7 @@ from app.schemas.token import (
     MintTokenResponse,
     RevokeTokenRequest,
     RevokeTokenResponse,
+    TokenListResponse,
     TokenMetadataResponse,
     ValidateTokenRequest,
     ValidateTokenResponse,
@@ -20,12 +21,40 @@ from app.services.token_service import (
     NoActiveSigningKeyError,
     TokenNotFoundError,
     get_token_metadata,
+    list_tokens,
     mint_token,
     revoke_token,
 )
 from app.ws_manager import revocation_broadcaster
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
+
+
+@router.get("", response_model=TokenListResponse)
+def list_tokens_endpoint(
+    status: str | None = None,
+    subject: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(verify_api_key),
+    db: Session = Depends(get_db),
+) -> TokenListResponse:
+    """List tokens with optional filters."""
+    items, total = list_tokens(db, status=status, subject=subject, limit=limit, offset=offset)
+    return TokenListResponse(
+        items=[
+            TokenMetadataResponse(
+                id=t.id,
+                subject=t.subject,
+                scopes=t.scopes,
+                issued_at=t.issued_at,
+                expires_at=t.expires_at,
+                status=t.status.value,
+            )
+            for t in items
+        ],
+        total=total,
+    )
 
 
 @router.post("", response_model=MintTokenResponse)

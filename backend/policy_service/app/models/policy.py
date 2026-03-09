@@ -14,4 +14,5 @@ class Policy(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     rules = Column(JSONB, nullable=False)
+    dsl = Column(JSONB, nullable=True)  # Original DSL for UI rehydration
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

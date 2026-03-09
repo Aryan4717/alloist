@@ -45,3 +45,8 @@ class TokenMetadataResponse(BaseModel):
     issued_at: datetime
     expires_at: datetime
     status: str
+
+
+class TokenListResponse(BaseModel):
+    items: list[TokenMetadataResponse]
+    total: int
