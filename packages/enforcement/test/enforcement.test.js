@@ -231,4 +231,143 @@ describe('enforcement.check', () => {
     assert.strictEqual(result.reason, 'token_revoked');
     assert.ok(result.evidence_id);
   });
+
+  it('fail_closed blocks when token backend unreachable (network partition)', async () => {
+    const { token, jwks } = await makeTestToken({ scopes: ['email:send'] });
+
+    globalThis.fetch = async () => {
+      throw new Error('network unreachable');
+    };
+
+    globalThis.WebSocket = class {
+      constructor() {
+        this.on = () => {};
+        this.close = () => {};
+      }
+    };
+
+    const { createEnforcement } = require('../src/index.js');
+    const enforcement = createEnforcement({
+      apiUrl: 'http://localhost:9999',
+      failClosed: true,
+      highRiskActions: ['send_email'],
+      jwksOverride: jwks,
+    });
+
+    const result = await enforcement.check({
+      token,
+      action: { name: 'send_email', service: 'email', metadata: {} },
+    });
+
+    enforcement.close();
+    assert.strictEqual(result.allowed, false);
+    assert.strictEqual(result.reason, 'fail_closed_backend_unreachable');
+  });
+
+  it('soft_fail allows and logs degraded_mode when backend unreachable', async () => {
+    const { token, jwks } = await makeTestToken({ scopes: ['read'] });
+    const logs = [];
+
+    globalThis.fetch = async () => {
+      throw new Error('network unreachable');
+    };
+
+    globalThis.WebSocket = class {
+      constructor() {
+        this.on = () => {};
+        this.close = () => {};
+      }
+    };
+
+    const { createEnforcement } = require('../src/index.js');
+    const enforcement = createEnforcement({
+      apiUrl: 'http://localhost:9999',
+      failMode: 'soft_fail',
+      failModePerAction: { read_logs: 'soft_fail' },
+      jwksOverride: jwks,
+      onLog: (p) => logs.push(p),
+    });
+
+    const result = await enforcement.check({
+      token,
+      action: { name: 'read_logs', service: 'logs', metadata: {} },
+    });
+
+    enforcement.close();
+    assert.strictEqual(result.allowed, true);
+    assert.ok(logs.some((l) => l.degraded_mode === 'soft_fail'));
+  });
+
+  it('fail_open allows when backend unreachable', async () => {
+    const { token, jwks } = await makeTestToken({ scopes: ['read'] });
+
+    globalThis.fetch = async () => {
+      throw new Error('network unreachable');
+    };
+
+    globalThis.WebSocket = class {
+      constructor() {
+        this.on = () => {};
+        this.close = () => {};
+      }
+    };
+
+    const { createEnforcement } = require('../src/index.js');
+    const enforcement = createEnforcement({
+      apiUrl: 'http://localhost:9999',
+      failMode: 'fail_open',
+      jwksOverride: jwks,
+    });
+
+    const result = await enforcement.check({
+      token,
+      action: { name: 'read_logs', service: 'logs', metadata: {} },
+    });
+
+    enforcement.close();
+    assert.strictEqual(result.allowed, true);
+  });
+
+  it('fail_mode_per_action overrides: send_email fail_closed, read_logs soft_fail', async () => {
+    const { token, jwks } = await makeTestToken({ scopes: ['email:send', 'read'] });
+    const logs = [];
+
+    globalThis.fetch = async () => {
+      throw new Error('network unreachable');
+    };
+
+    globalThis.WebSocket = class {
+      constructor() {
+        this.on = () => {};
+        this.close = () => {};
+      }
+    };
+
+    const { createEnforcement } = require('../src/index.js');
+    const enforcement = createEnforcement({
+      apiUrl: 'http://localhost:9999',
+      failModePerAction: {
+        send_email: 'fail_closed',
+        read_logs: 'soft_fail',
+      },
+      jwksOverride: jwks,
+      onLog: (p) => logs.push(p),
+    });
+
+    const resultSend = await enforcement.check({
+      token,
+      action: { name: 'send_email', service: 'email', metadata: {} },
+    });
+    assert.strictEqual(resultSend.allowed, false);
+    assert.strictEqual(resultSend.reason, 'fail_closed_backend_unreachable');
+
+    const resultRead = await enforcement.check({
+      token,
+      action: { name: 'read_logs', service: 'logs', metadata: {} },
+    });
+    assert.strictEqual(resultRead.allowed, true);
+    assert.ok(logs.some((l) => l.degraded_mode === 'soft_fail'));
+
+    enforcement.close();
+  });
 });

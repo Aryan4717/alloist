@@ -45,8 +45,10 @@ if not result["allowed"]:
 |--------|------|---------|-------------|
 | `api_url` | str | `"http://localhost:8000"` | Token service base URL |
 | `api_key` | str | `""` | API key for validation endpoint |
-| `fail_closed` | bool | `False` | Block high-risk actions when backend unreachable |
-| `high_risk_actions` | list[str] | `["send_email", "delete_user", "transfer_funds"]` | Actions to block when failClosed and no cache |
+| `fail_closed` | bool | `False` | (Legacy) Block high-risk actions when backend unreachable |
+| `high_risk_actions` | list[str] | `["send_email", "delete_user", "transfer_funds"]` | (Legacy) Actions to block when fail_closed |
+| `fail_mode` | str | `"fail_open"` | Default when backend unreachable: `fail_closed`, `soft_fail`, or `fail_open` |
+| `fail_mode_per_action` | dict[str, str] | None | Per-action override, e.g. `{"send_email": "fail_closed", "read_logs": "soft_fail"}` |
 | `on_log` | callable | None | Callback for check events `{evidence_id, action, result}` |
 | `jwks_override` | dict | None | For testing: pass `{keys: [...]}` to bypass JWKS fetch |
 
@@ -61,7 +63,11 @@ Returns `dict` with `allowed: bool`, `reason?: str`, `evidence_id: str`.
 3. **Remote fallback**: If not cached, calls `POST /tokens/validate` to check status.
 4. **Policy**: Maps `action_name` to required scope (e.g. `send_email` -> `email:send`).
 5. **Evidence**: Each check gets a unique `evidence_id` (UUID).
-6. **Fail-closed**: When `fail_closed=True` and backend unreachable and no cached policy, blocks actions in `high_risk_actions`.
+6. **Fail modes** (when token or policy backend unreachable):
+   - `fail_closed`: Block action with `fail_closed_backend_unreachable`
+   - `soft_fail`: Allow but create high-severity evidence (`severity: "high"`, `degraded_mode: "soft_fail"`)
+   - `fail_open`: Allow without special audit
+   - Use `fail_mode_per_action` for per-action overrides; legacy `fail_closed` + `high_risk_actions` still supported
 
 ## Backend Requirements
 
