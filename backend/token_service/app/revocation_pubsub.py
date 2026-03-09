@@ -72,6 +72,15 @@ async def subscribe_revocation(
                 await callback(payload)
             except (json.JSONDecodeError, TypeError) as e:
                 logger.warning("Invalid revocation message: %s", e)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        logger.warning("Revocation subscribe error: %s", e)
+    finally:
+        try:
+            await pubsub.aclose()
+        except Exception:
+            pass
 
 
 def start_revocation_subscriber(
