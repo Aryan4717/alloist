@@ -20,7 +20,8 @@ alloist/
 │   ├── policy_service/      # Policy evaluation, evidence export (port 8001)
 │   └── demos/
 │       ├── gmail_block_demo/    # Blocks gmail.send
-│       └── stripe_block_demo/   # Blocks stripe.charge > $1000
+│       ├── stripe_block_demo/   # Blocks stripe.charge > $1000
+│       └── yc_demo/             # Full flow: block, revoke, export+verify
 ├── packages/
 │   ├── enforcement_py/      # Python SDK for enforcement
 │   └── enforcement/         # Node.js SDK

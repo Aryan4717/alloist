@@ -37,8 +37,12 @@ def generate_ed25519_keypair() -> tuple[str, str]:
     return private_b64, public_b64
 
 
+_ephemeral_keypair: tuple[Ed25519PrivateKey, Ed25519PublicKey] | None = None
+
+
 def _get_signing_keypair() -> tuple[Ed25519PrivateKey, Ed25519PublicKey]:
-    """Get evidence signing keypair from env or generate for dev."""
+    """Get evidence signing keypair from env or generate for dev (cached per process)."""
+    global _ephemeral_keypair
     settings = get_settings()
     if settings.EVIDENCE_SIGNING_PRIVATE_KEY and settings.EVIDENCE_SIGNING_PUBLIC_KEY:
         raw_priv = base64.b64decode(settings.EVIDENCE_SIGNING_PRIVATE_KEY.encode("ascii"))
@@ -47,14 +51,16 @@ def _get_signing_keypair() -> tuple[Ed25519PrivateKey, Ed25519PublicKey]:
             Ed25519PrivateKey.from_private_bytes(raw_priv),
             Ed25519PublicKey.from_public_bytes(raw_pub),
         )
-    # Dev mode: generate ephemeral keypair
-    priv, pub_b64 = generate_ed25519_keypair()
-    raw_priv = base64.b64decode(priv.encode("ascii"))
-    raw_pub = base64.b64decode(pub_b64.encode("ascii"))
-    return (
-        Ed25519PrivateKey.from_private_bytes(raw_priv),
-        Ed25519PublicKey.from_public_bytes(raw_pub),
-    )
+    # Dev mode: generate ephemeral keypair once per process
+    if _ephemeral_keypair is None:
+        priv, pub_b64 = generate_ed25519_keypair()
+        raw_priv = base64.b64decode(priv.encode("ascii"))
+        raw_pub = base64.b64decode(pub_b64.encode("ascii"))
+        _ephemeral_keypair = (
+            Ed25519PrivateKey.from_private_bytes(raw_priv),
+            Ed25519PublicKey.from_public_bytes(raw_pub),
+        )
+    return _ephemeral_keypair
 
 
 def _canonical_json(obj: dict[str, Any]) -> bytes:
@@ -74,6 +80,16 @@ def compute_input_hash(
         "metadata": runtime_metadata or {},
     }
     return hashlib.sha256(_canonical_json(excerpt)).hexdigest()
+
+
+def _normalize_timestamp(ts: object) -> str:
+    """Normalize timestamp to canonical string for signing/verification."""
+    if hasattr(ts, "isoformat"):
+        dt = ts
+        if hasattr(dt, "tzinfo") and dt.tzinfo is not None:
+            dt = dt.replace(tzinfo=None)
+        return dt.isoformat()
+    return str(ts)
 
 
 def canonical_payload(evidence: dict[str, Any]) -> bytes:
@@ -132,11 +148,14 @@ def create_evidence(
     timestamp = datetime.now(timezone.utc)
     input_hash = compute_input_hash(action_name, token_snapshot, runtime_metadata)
 
+    # Use timestamp format that matches DB round-trip (naive isoformat for consistency)
+    ts_str = _normalize_timestamp(timestamp)
+
     evidence_dict = {
         "evidence_id": str(evidence_id),
         "action_name": action_name,
         "token_snapshot": token_snapshot,
-        "timestamp": timestamp.isoformat(),
+        "timestamp": ts_str,
         "input_hash": input_hash,
         "policy_id": str(policy_id) if policy_id else None,
         "result": result,
@@ -169,8 +188,7 @@ def get_evidence(db: Session, evidence_id: UUID) -> Evidence | None:
 
 def evidence_to_bundle(evidence: Evidence, public_key_b64: str) -> dict[str, Any]:
     """Convert Evidence row to signed bundle dict for export."""
-    ts = evidence.timestamp
-    ts_str = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+    ts_str = _normalize_timestamp(evidence.timestamp)
     return {
         "evidence_id": str(evidence.id),
         "action_name": evidence.action_name,

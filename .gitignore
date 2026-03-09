@@ -4,3 +4,4 @@ packages/*/node_modules/
 __pycache__/
 *.egg-info/
 .pytest_cache/
+*_evidence.json
