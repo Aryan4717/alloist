@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -35,3 +36,17 @@ class ExportEvidenceResponse(BaseModel):
 
 class EvidenceKeysResponse(BaseModel):
     public_key: str
+
+
+class EvidenceListItem(BaseModel):
+    id: UUID
+    action_name: str
+    result: str
+    timestamp: datetime
+    policy_id: UUID | None
+    token_snapshot: dict[str, Any]
+
+
+class EvidenceListResponse(BaseModel):
+    items: list[EvidenceListItem]
+    total: int

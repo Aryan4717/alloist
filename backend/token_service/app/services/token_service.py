@@ -75,3 +75,30 @@ def revoke_token(db: Session, token_id: UUID) -> bool:
 def get_token_metadata(db: Session, token_id: UUID) -> Token | None:
     """Get token metadata by id. Returns None if not found. Excludes token_value."""
     return db.query(Token).filter(Token.id == token_id).first()
+
+
+def list_tokens(
+    db: Session,
+    status: str | None = None,
+    subject: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Token], int]:
+    """List tokens with optional filters. Returns (items, total)."""
+    q = db.query(Token)
+    if status:
+        try:
+            st = TokenStatus(status)
+            q = q.filter(Token.status == st)
+        except ValueError:
+            pass
+    if subject:
+        q = q.filter(Token.subject.ilike(f"%{subject}%"))
+    total = q.count()
+    items = (
+        q.order_by(Token.issued_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return items, total
