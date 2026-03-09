@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Callable
 
-from . import api, jwt, policy, policy_service, websocket_
+from . import api, evidence, jwt, policy, policy_service, websocket_
 
 
 def create_enforcement(
@@ -113,6 +113,18 @@ def create_enforcement(
                     )
                     if ps_result is not None and not ps_result.get("allowed"):
                         reason = ps_result.get("reason", "policy_denied")
+                        policy_id = ps_result.get("policy_id")
+                        token_snapshot = evidence.get_token_snapshot(token, jti, scopes)
+                        evidence.create_evidence_remote(
+                            evidence_id=evidence_id,
+                            action_name=action_name,
+                            token_snapshot=token_snapshot,
+                            policy_id=str(policy_id) if policy_id else None,
+                            result="deny",
+                            runtime_metadata={"reason": reason},
+                            policy_service_url=policy_service_url,
+                            api_key=policy_service_api_key,
+                        )
                         log({"action": action_name, "result": "blocked", "reason": reason})
                         return {"allowed": False, "reason": reason, "evidence_id": evidence_id}
 

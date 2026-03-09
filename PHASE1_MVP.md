@@ -68,7 +68,14 @@ cd backend/demos/stripe_block_demo
 python run_demo.py
 ```
 
-Expected: Agent attempts action → policy denies → `Blocked: ... (evidence_id: <uuid>)`
+**YC demo** (full flow: block, revoke mid-flow, export + verify evidence):
+
+```bash
+cd backend/demos/yc_demo
+python run_demo.py
+```
+
+Expected: Agent attempts action → policy denies → `Blocked: ... (evidence_id: <uuid>)` → evidence exported and signature verified
 
 ## Running Tests
 
@@ -104,7 +111,8 @@ pytest tests/ -v
 ## Demos
 
 - **gmail_block_demo** – Agent attempts `gmail.send` → policy denies → blocked with evidence_id
-- **stripe_block_demo** – Agent attempts `stripe.charge` $1500 → policy denies (amount > 1000) → blocked, exports signed evidence bundle to `stripe_block_evidence.json`
+- **stripe_block_demo** – Agent attempts `stripe.charge` $1500 → policy denies (amount > 1000) → blocked, exports signed evidence bundle and verifies signature
+- **yc_demo** – Full YC recording flow: create token + policy → block → revoke token mid-flow → block again (token_revoked) → export evidence → verify signature
 
 See `backend/demos/*/README.md` for detailed demo steps.
 
