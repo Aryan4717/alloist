@@ -1,0 +1,16 @@
+{
+  "evidence_id": "8f09d1da-72d8-4c9a-95ba-d8ad8de42a81",
+  "timestamp": "2026-03-09T05:55:54.298119+00:00",
+  "action": {
+    "service": "stripe",
+    "name": "charge",
+    "metadata": {
+      "amount": 1500,
+      "currency": "usd"
+    }
+  },
+  "result": "blocked",
+  "reason": "Block large Stripe charges",
+  "policy_id": null,
+  "signature": "placeholder"
+}
