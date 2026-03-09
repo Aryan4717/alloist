@@ -1,0 +1,122 @@
+name: Perf Sanity
+
+on:
+  push:
+    branches: [feature/scale-testing, main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Start services
+        run: |
+          cd backend/token_service
+          docker compose up -d
+          echo "Waiting for services..."
+          sleep 15
+
+      - name: Wait for token service
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/keys > /dev/null; then
+              echo "Token service ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Wait for policy service
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf -H "X-API-Key: dev-api-key" http://localhost:8001/policy > /dev/null; then
+              echo "Policy service ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Install benchmark deps
+        run: |
+          pip install -r benchmarks/requirements.txt
+          pip install -e packages/enforcement_py
+
+      - name: Run revoke latency benchmark
+        run: |
+          cd benchmarks
+          python revoke_latency.py --host http://localhost:8000 --clients 100 --api-key dev-api-key 2>&1 | tee revoke_result.json
+
+      - name: Run agent throughput benchmark
+        run: |
+          cd benchmarks
+          python agent_throughput.py --host http://localhost:8000 --policy-url http://localhost:8001 --workers 20 --duration 5 --api-key dev-api-key 2>&1 | tee agent_result.json
+
+      - name: Assert thresholds and output metrics
+        run: |
+          cd benchmarks
+          python3 << 'PYEOF'
+          import json
+          import os
+          import sys
+
+          def load_json(path, default):
+              try:
+                  with open(path) as f:
+                      for line in f:
+                          line = line.strip()
+                          if line.startswith("{"):
+                              return json.loads(line)
+              except (json.JSONDecodeError, FileNotFoundError):
+                  pass
+              return default
+
+          revoke = load_json("revoke_result.json", {"p95_ms": None, "error": "parse_failed"})
+          agent = load_json("agent_result.json", {"throughput_checks_per_sec": None, "error": "parse_failed"})
+
+          p95 = revoke.get("p95_ms")
+          throughput = agent.get("throughput_checks_per_sec")
+          if p95 is None:
+              p95 = 9999
+          if throughput is None:
+              throughput = 0
+
+          summary = f"""## Perf Results
+
+          | Metric | Value | Threshold |
+          |--------|-------|-----------|
+          | Revoke p95 (ms) | {p95} | < 500 |
+          | Throughput (checks/s) | {throughput} | > 50 |
+          """
+          step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if step_summary:
+              with open(step_summary, "a") as f:
+                  f.write(summary)
+
+          fail = False
+          if p95 >= 500:
+              print(f"FAIL: Revoke p95 {p95}ms >= 500ms", file=sys.stderr)
+              fail = True
+          if throughput < 50:
+              print(f"FAIL: Throughput {throughput} < 50 checks/s", file=sys.stderr)
+              fail = True
+
+          with open("perf_results.json", "w") as f:
+              json.dump({"revoke": revoke, "agent": agent}, f, indent=2)
+
+          sys.exit(1 if fail else 0)
+          PYEOF
+
+      - name: Upload perf results
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results
+          path: benchmarks/perf_results.json
