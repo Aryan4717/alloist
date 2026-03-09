@@ -118,7 +118,7 @@ def test_recheck_revoked_before_allowed_in_flight() -> None:
             patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=slow_validate),
             patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
         ):
-            mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+            mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
             enforcement = create_enforcement(
                 api_url="http://localhost:9999",
                 fail_closed=False,
@@ -149,7 +149,7 @@ def test_fail_closed_blocks_when_token_backend_unreachable() -> None:
         patch("cognara_enforce.enforcement.api.validate_token_remote", return_value=None),
         patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
     ):
-        mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+        mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             fail_closed=True,
@@ -179,7 +179,7 @@ def test_soft_fail_allows_with_evidence_when_backend_unreachable() -> None:
             return_value=True,
         ) as mock_evidence,
     ):
-        mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+        mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             fail_mode="soft_fail",
@@ -211,7 +211,7 @@ def test_fail_open_allows_when_backend_unreachable() -> None:
             return_value=True,
         ) as mock_evidence,
     ):
-        mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+        mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             fail_mode="fail_open",
@@ -240,7 +240,7 @@ def test_fail_mode_per_action_override() -> None:
             return_value=True,
         ) as mock_evidence,
     ):
-        mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+        mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             fail_mode_per_action={
@@ -283,7 +283,7 @@ def test_policy_service_unreachable_fail_closed() -> None:
         ),
         patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
     ):
-        mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+        mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             policy_service_url="http://localhost:8001",
