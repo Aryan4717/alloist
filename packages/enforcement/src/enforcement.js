@@ -6,17 +6,33 @@ const { verifyTokenLocally } = require('./jwt.js');
 const { validateTokenRemote } = require('./api.js');
 const { checkPolicy } = require('./policy.js');
 
+function resolveFailMode(actionName, failMode, failModePerAction, failClosed, highRiskActions) {
+  if (failModePerAction != null && actionName in failModePerAction) {
+    return failModePerAction[actionName];
+  }
+  if (failModePerAction != null) {
+    return failMode;
+  }
+  if (failClosed && highRiskActions.includes(actionName)) {
+    return 'fail_closed';
+  }
+  return 'fail_open';
+}
+
 function createEnforcement(options = {}) {
   const {
     apiUrl = 'http://localhost:8000',
     apiKey = '',
     failClosed = false,
     highRiskActions = ['send_email', 'delete_user', 'transfer_funds'],
+    failMode = 'fail_open',
+    failModePerAction = null,
     onLog = null,
     jwksOverride = null, // for testing: pass { keys: [...] } to bypass fetch
+    _testRevokedTokens = null, // for testing: shared set to inject revocations
   } = options;
 
-  const revokedTokens = new Set();
+  const revokedTokens = _testRevokedTokens || new Set();
   const cache = new Map(); // jti -> { status, subject, scopes, cachedAt }
 
   const ws = createRevocationListener(apiUrl, (tokenId) => {
@@ -65,13 +81,23 @@ function createEnforcement(options = {}) {
               return { allowed: false, reason: 'token_revoked', evidence_id: evidenceId };
             }
           } else {
-            if (failClosed && highRiskActions.includes(action?.name)) {
+            const mode = resolveFailMode(
+              action?.name,
+              failMode,
+              failModePerAction,
+              failClosed,
+              highRiskActions,
+            );
+            if (mode === 'fail_closed') {
               log({ action, result: 'blocked', reason: 'fail_closed_backend_unreachable' });
               return {
                 allowed: false,
                 reason: 'fail_closed_backend_unreachable',
                 evidence_id: evidenceId,
               };
+            }
+            if (mode === 'soft_fail') {
+              log({ action, result: 'allowed', degraded_mode: 'soft_fail' });
             }
           }
         }
@@ -83,10 +109,23 @@ function createEnforcement(options = {}) {
           return { allowed: false, reason: policy.reason, evidence_id: evidenceId };
         }
 
+        // 5. Fail-closed: re-check revoked before returning allowed (in-flight revocation)
+        if (revokedTokens.has(jti)) {
+          log({ action, result: 'blocked', reason: 'token_revoked' });
+          return { allowed: false, reason: 'token_revoked', evidence_id: evidenceId };
+        }
+
         log({ action, result: 'allowed' });
         return { allowed: true, evidence_id: evidenceId };
       } catch (err) {
-        if (failClosed && highRiskActions.includes(action?.name)) {
+        const mode = resolveFailMode(
+          action?.name,
+          failMode,
+          failModePerAction,
+          failClosed,
+          highRiskActions,
+        );
+        if (mode === 'fail_closed') {
           log({ action, result: 'blocked', reason: err.message });
           return {
             allowed: false,

@@ -37,3 +37,13 @@ Phase 1 delivers a working permission layer with token minting, policy evaluatio
 - Full API reference and Postman testing guide
 - Environment variables
 - Database connection details
+
+## Phase 2
+
+Phase 2 adds fail-closed modes, revocation push (Redis), and scale/perf testing.
+
+**See [PHASE2_README.md](PHASE2_README.md) for:**
+- 2.1 Fail-closed modes & offline resilience
+- 2.2 Revocation push system (Redis pub/sub)
+- 2.3 Scale & perf benchmarking
+- Full testing checklist

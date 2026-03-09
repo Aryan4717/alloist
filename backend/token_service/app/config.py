@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     )
 
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/token_service"
+    REDIS_URL: str = "redis://localhost:6379/0"
     TOKEN_SERVICE_API_KEY: str = ""
+    REVOCATION_SIGNING_PRIVATE_KEY: str = ""
+    REVOCATION_SIGNING_PUBLIC_KEY: str = ""
 
 
 _settings: Settings | None = None
