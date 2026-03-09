@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, verify_api_key
@@ -63,3 +65,42 @@ def list_policies(
     """List all policies."""
     policies = db.query(Policy).all()
     return [PolicyResponse.model_validate(p) for p in policies]
+
+
+@router.put("/{policy_id}", response_model=PolicyResponse)
+def update_policy(
+    policy_id: UUID,
+    body: CreatePolicyRequest,
+    _: None = Depends(verify_api_key),
+    db: Session = Depends(get_db),
+) -> PolicyResponse:
+    """Update a policy by id."""
+    policy = db.query(Policy).filter(Policy.id == policy_id).first()
+    if not policy:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Policy not found: {policy_id}",
+        )
+    policy.name = body.name
+    policy.description = body.description
+    policy.rules = body.rules
+    db.commit()
+    db.refresh(policy)
+    return PolicyResponse.model_validate(policy)
+
+
+@router.delete("/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_policy(
+    policy_id: UUID,
+    _: None = Depends(verify_api_key),
+    db: Session = Depends(get_db),
+) -> None:
+    """Delete a policy by id."""
+    policy = db.query(Policy).filter(Policy.id == policy_id).first()
+    if not policy:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Policy not found: {policy_id}",
+        )
+    db.delete(policy)
+    db.commit()

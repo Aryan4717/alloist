@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,6 +8,8 @@ from app.api.deps import get_db, verify_api_key
 from app.schemas.evidence import (
     CreateEvidenceRequest,
     CreateEvidenceResponse,
+    EvidenceListItem,
+    EvidenceListResponse,
     ExportEvidenceRequest,
     ExportEvidenceResponse,
     EvidenceKeysResponse,
@@ -16,9 +19,46 @@ from app.services.evidence_service import (
     evidence_to_bundle,
     get_evidence,
     get_public_key_b64,
+    list_evidence,
 )
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
+
+
+@router.get("", response_model=EvidenceListResponse)
+def list_evidence_endpoint(
+    result: str | None = None,
+    action_name: str | None = None,
+    since: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(verify_api_key),
+    db: Session = Depends(get_db),
+) -> EvidenceListResponse:
+    """List evidence with optional filters. since: ISO8601 datetime string."""
+    since_dt: datetime | None = None
+    if since:
+        try:
+            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+    items, total = list_evidence(
+        db, result=result, action_name=action_name, since=since_dt, limit=limit, offset=offset
+    )
+    return EvidenceListResponse(
+        items=[
+            EvidenceListItem(
+                id=e.id,
+                action_name=e.action_name,
+                result=e.result,
+                timestamp=e.timestamp,
+                policy_id=e.policy_id,
+                token_snapshot=e.token_snapshot,
+            )
+            for e in items
+        ],
+        total=total,
+    )
 
 
 @router.post("/create", response_model=CreateEvidenceResponse)

@@ -186,6 +186,32 @@ def get_evidence(db: Session, evidence_id: UUID) -> Evidence | None:
     return db.get(Evidence, evidence_id)
 
 
+def list_evidence(
+    db: Session,
+    result: str | None = None,
+    action_name: str | None = None,
+    since: datetime | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Evidence], int]:
+    """List evidence with optional filters. Returns (items, total)."""
+    q = db.query(Evidence)
+    if result:
+        q = q.filter(Evidence.result == result)
+    if action_name:
+        q = q.filter(Evidence.action_name.ilike(f"%{action_name}%"))
+    if since is not None:
+        q = q.filter(Evidence.timestamp >= since)
+    total = q.count()
+    items = (
+        q.order_by(Evidence.timestamp.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return items, total
+
+
 def evidence_to_bundle(evidence: Evidence, public_key_b64: str) -> dict[str, Any]:
     """Convert Evidence row to signed bundle dict for export."""
     ts_str = _normalize_timestamp(evidence.timestamp)
