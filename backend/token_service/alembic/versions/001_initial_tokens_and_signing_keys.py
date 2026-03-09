@@ -66,4 +66,4 @@ def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table("tokens")
     op.drop_table("signing_keys")
-    sa.Enum("active", "revoked", name="tokenstatus").drop(op.get_bind(), checkfirst=True)
+    postgresql.ENUM("active", "revoked", name="tokenstatus").drop(op.get_bind(), checkfirst=True)

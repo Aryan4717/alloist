@@ -15,18 +15,43 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   token_service:
     build: .
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
+      REDIS_URL: redis://redis:6379/0
       TOKEN_SERVICE_API_KEY: ${TOKEN_SERVICE_API_KEY:-dev-api-key}
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     entrypoint: ["/bin/sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+
+  policy_service:
+    build: ../policy_service
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
+      POLICY_SERVICE_API_KEY: ${POLICY_SERVICE_API_KEY:-dev-api-key}
+    ports:
+      - "8001:8001"
+    depends_on:
+      token_service:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8001"]
 
 volumes:
   postgres_data:
