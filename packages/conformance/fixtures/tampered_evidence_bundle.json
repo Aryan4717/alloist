@@ -1,0 +1,13 @@
+{
+  "evidence_id": "conformance-evidence-1",
+  "action_name": "tampered",
+  "token_snapshot": {
+    "jti": "t1"
+  },
+  "timestamp": "2026-01-09T12:00:00",
+  "result": "deny",
+  "runtime_metadata": {},
+  "input_hash": "090e5c4d86af2aecc679dae39eebb0d4ca3b43588bbdfe0006c46bec3cd58fe7",
+  "runtime_signature": "JjwSMFHDjpMKejkCmZMb82UkgWNVK+Zyghux6yo5jfNlWoGj4mcHMAFNsoWvB4Do1m50BoJxY4WYaX8/7FPaDQ==",
+  "public_key": "92RMOT9JzVaM17shOWSqyX98YjqZD7DCmL74dZtvwAA="
+}
