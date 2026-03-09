@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from cognara_enforce import create_enforcement
-from cognara_enforce.api import validate_token_remote
+from alloist_enforce import create_enforcement
+from alloist_enforce.api import validate_token_remote
 from tests.conftest import make_test_token
 
 
@@ -22,7 +22,7 @@ def test_returns_blocked_for_revoked_token_from_api() -> None:
             "scopes": [],
         }
 
-    with patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate):
+    with patch("alloist_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate):
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             fail_closed=False,
@@ -47,7 +47,7 @@ def test_returns_allowed_for_valid_token_with_correct_scope() -> None:
             "scopes": ["email:send"],
         }
 
-    with patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate):
+    with patch("alloist_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate):
         enforcement = create_enforcement(
             api_url="http://localhost:9999",
             fail_closed=False,
@@ -76,9 +76,9 @@ def test_returns_blocked_when_policy_service_denies() -> None:
         return {"allowed": False, "policy_id": "p1", "reason": "Block Gmail send"}
 
     with (
-        patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate),
+        patch("alloist_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate),
         patch(
-            "cognara_enforce.enforcement.policy_service.evaluate_remote",
+            "alloist_enforce.enforcement.policy_service.evaluate_remote",
             side_effect=mock_policy_evaluate,
         ),
     ):
@@ -115,8 +115,8 @@ def test_recheck_revoked_before_allowed_in_flight() -> None:
 
     def run_check():
         with (
-            patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=slow_validate),
-            patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+            patch("alloist_enforce.enforcement.api.validate_token_remote", side_effect=slow_validate),
+            patch("alloist_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
         ):
             mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
             enforcement = create_enforcement(
@@ -146,8 +146,8 @@ def test_fail_closed_blocks_when_token_backend_unreachable() -> None:
     token, jwks, _ = make_test_token({"scopes": ["email:send"]})
 
     with (
-        patch("cognara_enforce.enforcement.api.validate_token_remote", return_value=None),
-        patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+        patch("alloist_enforce.enforcement.api.validate_token_remote", return_value=None),
+        patch("alloist_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
     ):
         mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(
@@ -168,14 +168,14 @@ def test_soft_fail_allows_with_evidence_when_backend_unreachable() -> None:
     token, jwks, _ = make_test_token({"scopes": ["read"]})
 
     with (
-        patch("cognara_enforce.enforcement.api.validate_token_remote", return_value=None),
+        patch("alloist_enforce.enforcement.api.validate_token_remote", return_value=None),
         patch(
-            "cognara_enforce.enforcement.policy_service.evaluate_remote",
+            "alloist_enforce.enforcement.policy_service.evaluate_remote",
             return_value={"allowed": True},
         ),
-        patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+        patch("alloist_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
         patch(
-            "cognara_enforce.enforcement.evidence.create_evidence_remote",
+            "alloist_enforce.enforcement.evidence.create_evidence_remote",
             return_value=True,
         ) as mock_evidence,
     ):
@@ -204,10 +204,10 @@ def test_fail_open_allows_when_backend_unreachable() -> None:
     token, jwks, _ = make_test_token({"scopes": ["read"]})
 
     with (
-        patch("cognara_enforce.enforcement.api.validate_token_remote", return_value=None),
-        patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+        patch("alloist_enforce.enforcement.api.validate_token_remote", return_value=None),
+        patch("alloist_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
         patch(
-            "cognara_enforce.enforcement.evidence.create_evidence_remote",
+            "alloist_enforce.enforcement.evidence.create_evidence_remote",
             return_value=True,
         ) as mock_evidence,
     ):
@@ -229,14 +229,14 @@ def test_fail_mode_per_action_override() -> None:
     token, jwks, _ = make_test_token({"scopes": ["email:send", "read"]})
 
     with (
-        patch("cognara_enforce.enforcement.api.validate_token_remote", return_value=None),
+        patch("alloist_enforce.enforcement.api.validate_token_remote", return_value=None),
         patch(
-            "cognara_enforce.enforcement.policy_service.evaluate_remote",
+            "alloist_enforce.enforcement.policy_service.evaluate_remote",
             return_value={"allowed": True},
         ),
-        patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+        patch("alloist_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
         patch(
-            "cognara_enforce.enforcement.evidence.create_evidence_remote",
+            "alloist_enforce.enforcement.evidence.create_evidence_remote",
             return_value=True,
         ) as mock_evidence,
     ):
@@ -276,12 +276,12 @@ def test_policy_service_unreachable_fail_closed() -> None:
         }
 
     with (
-        patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate),
+        patch("alloist_enforce.enforcement.api.validate_token_remote", side_effect=mock_validate),
         patch(
-            "cognara_enforce.enforcement.policy_service.evaluate_remote",
+            "alloist_enforce.enforcement.policy_service.evaluate_remote",
             return_value=None,
         ),
-        patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+        patch("alloist_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
     ):
         mock_ws.return_value = type("Listener", (), {"close": lambda self: None})()
         enforcement = create_enforcement(

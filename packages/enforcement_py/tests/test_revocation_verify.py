@@ -8,7 +8,7 @@ from unittest.mock import patch
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from cognara_enforce.revocation_verify import (
+from alloist_enforce.revocation_verify import (
     fetch_revocation_public_key,
     verify_revocation_payload,
 )
@@ -76,7 +76,7 @@ def test_verify_revocation_payload_rejects_no_public_key() -> None:
 
 def test_fetch_revocation_public_key_returns_key_from_jwks() -> None:
     """fetch_revocation_public_key fetches and parses revocation key from GET /keys."""
-    import cognara_enforce.revocation_verify as rv
+    import alloist_enforce.revocation_verify as rv
 
     rv._cached_key = None  # Clear cache for fresh fetch
     private_key = Ed25519PrivateKey.generate()
@@ -100,7 +100,7 @@ def test_fetch_revocation_public_key_returns_key_from_jwks() -> None:
         def json(self):
             return jwks_response
 
-    with patch("cognara_enforce.revocation_verify.httpx.Client") as mock_client:
+    with patch("alloist_enforce.revocation_verify.httpx.Client") as mock_client:
         ctx = mock_client.return_value.__enter__.return_value
         ctx.get.return_value = MockResponse()
         result = fetch_revocation_public_key("http://localhost:8000")

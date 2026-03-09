@@ -27,7 +27,7 @@ def worker(
     duration_sec: float,
 ) -> tuple[int, int]:
     """Run check() in a loop for duration_sec. Returns (checks, errors)."""
-    from cognara_enforce import create_enforcement
+    from alloist_enforce import create_enforcement
 
     enforcement = create_enforcement(
         api_url=api_url,

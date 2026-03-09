@@ -34,7 +34,7 @@ When the token or policy backend is unreachable (network partition, outage), the
 ### SDK Usage (Python)
 
 ```python
-from cognara_enforce import create_enforcement
+from alloist_enforce import create_enforcement
 
 enforcement = create_enforcement(
     api_url="http://localhost:8000",

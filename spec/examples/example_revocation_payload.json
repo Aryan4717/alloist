@@ -1,0 +1,8 @@
+{
+  "token_id": "550e8400-e29b-41d4-a716-446655440000",
+  "event": "revoked",
+  "ts": "2026-01-09T12:05:00",
+  "nonce": "880e8400-e29b-41d4-a716-446655440003",
+  "kid": "revocation",
+  "signature": "dGVzdC1yZXZvY2F0aW9uLXNpZ25hdHVyZS1wbGFjZWhvbGRlcg=="
+}
