@@ -1,5 +1,7 @@
 """Tests for enforcement check - block/allow flows."""
 
+import threading
+import time
 from unittest.mock import patch
 
 import pytest
@@ -93,3 +95,47 @@ def test_returns_blocked_when_policy_service_denies() -> None:
     assert result["allowed"] is False
     assert result["reason"] == "Block Gmail send"
     assert "evidence_id" in result
+
+
+def test_recheck_revoked_before_allowed_in_flight() -> None:
+    """Fail-closed: re-check revoked_tokens before returning allowed (in-flight revocation)."""
+    token, jwks, jti = make_test_token({"scopes": ["email:send"], "jti": "in-flight-jti"})
+    revoked_tokens: set[str] = set()
+
+    def slow_validate(*args, **kwargs) -> dict:
+        time.sleep(0.2)
+        return {
+            "valid": True,
+            "status": "active",
+            "subject": "user",
+            "scopes": ["email:send"],
+        }
+
+    result_holder: list = []
+
+    def run_check():
+        with (
+            patch("cognara_enforce.enforcement.api.validate_token_remote", side_effect=slow_validate),
+            patch("cognara_enforce.enforcement.websocket_.create_revocation_listener") as mock_ws,
+        ):
+            mock_ws.return_value = type("Listener", (), {"close": lambda: None})()
+            enforcement = create_enforcement(
+                api_url="http://localhost:9999",
+                fail_closed=False,
+                jwks_override=jwks,
+                _test_revoked_tokens=revoked_tokens,
+            )
+            result_holder.append(
+                enforcement.check(token, "send_email", {"to": "user@example.com"}),
+            )
+            enforcement.close()
+
+    t = threading.Thread(target=run_check)
+    t.start()
+    time.sleep(0.05)
+    revoked_tokens.add(jti)
+    t.join()
+
+    assert len(result_holder) == 1
+    assert result_holder[0]["allowed"] is False
+    assert result_holder[0]["reason"] == "token_revoked"
