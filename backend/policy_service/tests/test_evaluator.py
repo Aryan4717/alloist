@@ -71,6 +71,22 @@ def test_evaluate_conditions_empty() -> None:
     assert evaluate_conditions([], {"metadata": {}}) is True
 
 
+def test_evaluate_conditions_not_contains() -> None:
+    """not_contains operator denies when value not in list."""
+    context = {"metadata": {}, "token": {"subject": "u1", "scopes": ["payments"]}}
+    # Deny when allow_payment not in scopes
+    assert evaluate_conditions(
+        [{"field": "token.scopes", "operator": "not_contains", "value": "allow_payment"}],
+        context,
+    ) is True
+    # Pass when allow_payment is in scopes
+    context_with_scope = {"metadata": {}, "token": {"subject": "u1", "scopes": ["payments", "allow_payment"]}}
+    assert evaluate_conditions(
+        [{"field": "token.scopes", "operator": "not_contains", "value": "allow_payment"}],
+        context_with_scope,
+    ) is False
+
+
 def test_evaluate_returns_deny_when_condition_met() -> None:
     """stripe.charge amount 1500 triggers deny."""
     token_id = uuid4()
