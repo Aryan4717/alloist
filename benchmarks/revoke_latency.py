@@ -47,6 +47,7 @@ async def run_benchmark(
     host: str,
     clients: int,
     api_key: str,
+    connect_wait: float = 2.0,
 ) -> dict:
     base = host.rstrip("/").replace("http://", "ws://").replace("https://", "wss://")
     ws_url = f"{base}/ws/revocations"
@@ -77,7 +78,7 @@ async def run_benchmark(
     ]
 
     # Allow connections to establish
-    await asyncio.sleep(2.0)
+    await asyncio.sleep(connect_wait)
 
     # Verify connection count (optional)
     with httpx.Client(timeout=10.0) as client:
@@ -133,10 +134,17 @@ def main() -> int:
     parser.add_argument("--host", default="http://localhost:8000", help="Token service URL")
     parser.add_argument("--clients", type=int, default=1000, help="Number of WebSocket clients")
     parser.add_argument("--api-key", default="dev-api-key", help="API key")
+    parser.add_argument("--output", help="Write JSON result to file")
+    parser.add_argument("--connect-wait", type=float, default=2.0, help="Seconds to wait for WS connections")
     args = parser.parse_args()
 
-    result = asyncio.run(run_benchmark(args.host, args.clients, args.api_key))
-    print(json.dumps(result, indent=2))
+    result = asyncio.run(
+        run_benchmark(args.host, args.clients, args.api_key, connect_wait=args.connect_wait)
+    )
+    out = json.dumps(result, indent=2)
+    if args.output:
+        Path(args.output).write_text(out)
+    print(out)
 
     if result.get("received", 0) < args.clients * 0.9:
         print(f"Warning: only {result['received']}/{args.clients} received", file=sys.stderr)

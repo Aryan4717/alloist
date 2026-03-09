@@ -107,6 +107,7 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=50, help="Concurrent workers")
     parser.add_argument("--duration", type=float, default=10.0, help="Run duration (seconds)")
     parser.add_argument("--api-key", default="dev-api-key", help="API key")
+    parser.add_argument("--output", help="Write JSON result to file")
     args = parser.parse_args()
 
     result = run_benchmark(
@@ -115,7 +116,10 @@ def main() -> int:
         args.duration,
         args.api_key,
     )
-    print(json.dumps(result, indent=2))
+    out = json.dumps(result, indent=2)
+    if args.output:
+        Path(args.output).write_text(out)
+    print(out)
     return 0 if result["errors"] == 0 else 1
 
 
