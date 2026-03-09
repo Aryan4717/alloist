@@ -10,7 +10,7 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base
-from app.models import Policy  # noqa: F401
+from app.models import Evidence, Policy  # noqa: F401
 from app.config import get_settings
 
 config = context.config

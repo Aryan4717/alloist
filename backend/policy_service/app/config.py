@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/token_service"
     POLICY_SERVICE_API_KEY: str = ""
+    EVIDENCE_SIGNING_PRIVATE_KEY: str = ""
+    EVIDENCE_SIGNING_PUBLIC_KEY: str = ""
 
 
 _settings: Settings | None = None
