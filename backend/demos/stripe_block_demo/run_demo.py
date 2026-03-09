@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Ensure cognara_enforce is importable
+# Ensure alloist_enforce is importable
 _repo_root = Path(__file__).resolve().parents[3]
 _enforcement_path = _repo_root / "packages" / "enforcement_py"
 if _enforcement_path.exists():

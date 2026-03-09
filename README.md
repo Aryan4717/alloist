@@ -15,6 +15,7 @@ Alloist gates AI agent actions (e.g., send email, charge payment) using:
 
 ```
 alloist/
+├── spec/                   # ACT-lite spec (alloist/spec)
 ├── apps/
 │   └── admin/              # Next.js admin UI (Phase 3)
 ├── backend/
@@ -64,3 +65,7 @@ Phase 3 adds a Next.js admin console for policies, tokens, and evidence.
 ```bash
 cd apps/admin && npm run dev
 ```
+
+## ACT-lite Spec (alloist/spec)
+
+The [spec/](spec/) directory contains the **Agent Capability Token (ACT-lite)** specification: token fields, evidence format, revocation semantics, key rotation, and verification steps. Includes JSON schemas, conformance tests, security recommendations, and examples. May be published as **alloist/spec**.

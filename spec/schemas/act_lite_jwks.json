@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alloist.github.io/spec/schemas/act_lite_jwks.json",
+  "title": "ACT-lite JWKS",
+  "description": "JSON Web Key Set for token and revocation verification",
+  "type": "object",
+  "required": ["keys"],
+  "properties": {
+    "keys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kty", "crv", "x", "kid"],
+        "properties": {
+          "kty": { "type": "string", "enum": ["OKP"] },
+          "crv": { "type": "string", "enum": ["Ed25519"] },
+          "x": {
+            "type": "string",
+            "description": "Base64url-encoded raw 32-byte public key"
+          },
+          "kid": {
+            "type": "string",
+            "description": "Key identifier"
+          },
+          "use": {
+            "type": "string",
+            "enum": ["sig", "revocation"],
+            "description": "Key use; 'revocation' for revocation event signing"
+          },
+          "alg": {
+            "type": "string",
+            "enum": ["EdDSA"]
+          }
+        }
+      }
+    }
+  }
+}

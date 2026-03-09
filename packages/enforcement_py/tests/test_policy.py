@@ -2,7 +2,7 @@
 
 import pytest
 
-from cognara_enforce.policy import check_policy
+from alloist_enforce.policy import check_policy
 
 
 def test_allows_when_scope_present() -> None:

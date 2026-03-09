@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alloist.github.io/spec/schemas/act_lite_token_claims.json",
+  "title": "ACT-lite Token Claims",
+  "description": "JWT claims for Agent Capability Token (ACT-lite)",
+  "type": "object",
+  "required": ["sub", "scopes", "jti", "iat", "exp"],
+  "properties": {
+    "sub": {
+      "type": "string",
+      "description": "Subject (agent or user identifier)"
+    },
+    "scopes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Capability scopes"
+    },
+    "jti": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique token ID; used for revocation"
+    },
+    "iat": {
+      "type": "integer",
+      "description": "Issued at (Unix seconds)"
+    },
+    "exp": {
+      "type": "integer",
+      "description": "Expiration (Unix seconds)"
+    },
+    "iss": {
+      "type": "string",
+      "description": "Issuer (optional)"
+    },
+    "aud": {
+      "type": ["string", "array"],
+      "description": "Audience (optional)"
+    }
+  }
+}

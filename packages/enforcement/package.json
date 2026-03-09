@@ -1,5 +1,5 @@
 {
-  "name": "@cognara/enforcement",
+  "name": "@alloist/enforcement",
   "version": "0.1.0",
   "description": "Tiny Node SDK for token+policy enforcement with offline caching and revocation listener",
   "main": "src/index.js",
@@ -10,7 +10,7 @@
     "test": "node --test test/*.test.js",
     "example": "node examples/send_email_demo.js"
   },
-  "keywords": ["enforcement", "token", "policy", "jwt", "cognara"],
+  "keywords": ["enforcement", "token", "policy", "jwt", "alloist"],
   "license": "MIT",
   "engines": {
     "node": ">=18"

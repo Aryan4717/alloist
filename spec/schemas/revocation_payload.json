@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alloist.github.io/spec/schemas/revocation_payload.json",
+  "title": "ACT-lite Revocation Payload",
+  "description": "Signed revocation event for a token",
+  "type": "object",
+  "required": ["token_id", "event", "ts", "nonce", "kid", "signature"],
+  "properties": {
+    "token_id": {
+      "type": "string",
+      "description": "Token jti being revoked"
+    },
+    "event": {
+      "type": "string",
+      "enum": ["revoked"],
+      "description": "Event type"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp; reject if older than max age (e.g. 120s)"
+    },
+    "nonce": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique per event for replay/dedup"
+    },
+    "kid": {
+      "type": "string",
+      "description": "Key identifier (e.g. revocation)"
+    },
+    "signature": {
+      "type": "string",
+      "description": "Base64 Ed25519 signature over canonical JSON of token_id, event, ts, nonce"
+    }
+  }
+}
