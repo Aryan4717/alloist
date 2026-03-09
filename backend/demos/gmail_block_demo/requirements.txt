@@ -1,0 +1,4 @@
+httpx>=0.26
+pyjwt[crypto]>=2.8
+cryptography>=42.0
+websocket-client>=1.6

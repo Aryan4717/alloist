@@ -5,12 +5,14 @@ from __future__ import annotations
 import uuid
 from typing import Any, Callable
 
-from . import api, jwt, policy, websocket_
+from . import api, jwt, policy, policy_service, websocket_
 
 
 def create_enforcement(
     api_url: str = "http://localhost:8000",
     api_key: str = "",
+    policy_service_url: str | None = None,
+    policy_service_api_key: str = "",
     fail_closed: bool = False,
     high_risk_actions: list[str] | None = None,
     on_log: Callable[[dict], None] | None = None,
@@ -92,7 +94,29 @@ def create_enforcement(
                                 "evidence_id": evidence_id,
                             }
 
-                # 4. Policy check
+                # 4. Policy service check (when configured)
+                if policy_service_url:
+                    if "." in action_name:
+                        service, name = action_name.split(".", 1)
+                    else:
+                        service, name = "", action_name
+                    action_payload = {
+                        "service": service,
+                        "name": name,
+                        "metadata": metadata or {},
+                    }
+                    ps_result = policy_service.evaluate_remote(
+                        token_id=jti,
+                        action=action_payload,
+                        policy_service_url=policy_service_url,
+                        api_key=policy_service_api_key,
+                    )
+                    if ps_result is not None and not ps_result.get("allowed"):
+                        reason = ps_result.get("reason", "policy_denied")
+                        log({"action": action_name, "result": "blocked", "reason": reason})
+                        return {"allowed": False, "reason": reason, "evidence_id": evidence_id}
+
+                # 5. Local policy check
                 policy_result = policy.check_policy(action_name, scopes)
                 if not policy_result.get("allowed"):
                     reason = policy_result.get("reason", "policy_denied")
