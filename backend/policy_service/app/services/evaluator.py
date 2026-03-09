@@ -101,6 +101,12 @@ def _eval_condition(operator: str, actual: Any, expected: Any) -> bool:
             if isinstance(actual, (list, tuple, str))
             else (expected in actual if hasattr(actual, "__contains__") else False)
         )
+    if operator == "not_contains":
+        return not (
+            expected in actual
+            if isinstance(actual, (list, tuple, str))
+            else (expected in actual if hasattr(actual, "__contains__") else False)
+        )
     return False
 
 
