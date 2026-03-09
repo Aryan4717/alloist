@@ -17,6 +17,7 @@ def create_enforcement(
     high_risk_actions: list[str] | None = None,
     on_log: Callable[[dict], None] | None = None,
     jwks_override: dict[str, Any] | None = None,
+    _test_revoked_tokens: set[str] | None = None,
 ) -> object:
     """
     Create enforcement instance. Returns object with check(token, action_name, metadata) and close().
@@ -24,7 +25,7 @@ def create_enforcement(
     if high_risk_actions is None:
         high_risk_actions = ["send_email", "delete_user", "transfer_funds"]
 
-    revoked_tokens: set[str] = set()
+    revoked_tokens: set[str] = _test_revoked_tokens if _test_revoked_tokens is not None else set()
     cache: dict[str, dict] = {}
 
     def on_revoked(token_id: str) -> None:
@@ -134,6 +135,11 @@ def create_enforcement(
                     reason = policy_result.get("reason", "policy_denied")
                     log({"action": action_name, "result": "blocked", "reason": reason})
                     return {"allowed": False, "reason": reason, "evidence_id": evidence_id}
+
+                # 6. Fail-closed: re-check revoked before returning allowed (in-flight revocation)
+                if jti in revoked_tokens:
+                    log({"action": action_name, "result": "blocked", "reason": "token_revoked"})
+                    return {"allowed": False, "reason": "token_revoked", "evidence_id": evidence_id}
 
                 log({"action": action_name, "result": "allowed"})
                 return {"allowed": True, "evidence_id": evidence_id}

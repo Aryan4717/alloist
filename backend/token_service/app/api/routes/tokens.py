@@ -14,6 +14,8 @@ from app.schemas.token import (
     ValidateTokenRequest,
     ValidateTokenResponse,
 )
+from app.revocation_pubsub import publish_revocation
+from app.revocation_signing import sign_revocation
 from app.services.token_service import (
     NoActiveSigningKeyError,
     TokenNotFoundError,
@@ -62,7 +64,11 @@ async def revoke_token_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
-    await revocation_broadcaster.broadcast_revocation(str(body.token_id))
+    token_id_str = str(body.token_id)
+    signed_payload = sign_revocation(token_id_str)
+    published = await publish_revocation(signed_payload)
+    if not published:
+        await revocation_broadcaster.broadcast_revocation_payload(signed_payload)
     return RevokeTokenResponse(success=True)
 
 

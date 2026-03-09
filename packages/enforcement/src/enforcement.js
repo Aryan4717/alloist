@@ -14,9 +14,10 @@ function createEnforcement(options = {}) {
     highRiskActions = ['send_email', 'delete_user', 'transfer_funds'],
     onLog = null,
     jwksOverride = null, // for testing: pass { keys: [...] } to bypass fetch
+    _testRevokedTokens = null, // for testing: shared set to inject revocations
   } = options;
 
-  const revokedTokens = new Set();
+  const revokedTokens = _testRevokedTokens || new Set();
   const cache = new Map(); // jti -> { status, subject, scopes, cachedAt }
 
   const ws = createRevocationListener(apiUrl, (tokenId) => {
@@ -81,6 +82,12 @@ function createEnforcement(options = {}) {
         if (!policy.allowed) {
           log({ action, result: 'blocked', reason: policy.reason });
           return { allowed: false, reason: policy.reason, evidence_id: evidenceId };
+        }
+
+        // 5. Fail-closed: re-check revoked before returning allowed (in-flight revocation)
+        if (revokedTokens.has(jti)) {
+          log({ action, result: 'blocked', reason: 'token_revoked' });
+          return { allowed: false, reason: 'token_revoked', evidence_id: evidenceId };
         }
 
         log({ action, result: 'allowed' });

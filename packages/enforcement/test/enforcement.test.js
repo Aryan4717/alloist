@@ -180,4 +180,55 @@ describe('enforcement.check', () => {
     assert.strictEqual(result.allowed, true);
     assert.ok(result.evidence_id);
   });
+
+  it('re-checks revoked before returning allowed (in-flight revocation)', async () => {
+    const { token, jwks, jti } = await makeTestToken({ scopes: ['email:send'], jti: 'in-flight-jti' });
+    const revokedTokens = new Set();
+
+    globalThis.fetch = async (url) => {
+      const u = url.toString();
+      if (u.includes('/validate')) {
+        await new Promise((r) => setTimeout(r, 100));
+        return {
+          ok: true,
+          json: async () => ({
+            valid: true,
+            status: 'active',
+            subject: 'user',
+            scopes: ['email:send'],
+            jti,
+          }),
+        };
+      }
+      return { ok: false };
+    };
+
+    globalThis.WebSocket = class {
+      constructor() {
+        this.on = () => {};
+        this.close = () => {};
+      }
+    };
+
+    const { createEnforcement } = require('../src/index.js');
+    const enforcement = createEnforcement({
+      apiUrl: 'http://localhost:9999',
+      failClosed: false,
+      jwksOverride: jwks,
+      _testRevokedTokens: revokedTokens,
+    });
+
+    const checkPromise = enforcement.check({
+      token,
+      action: { name: 'send_email', service: 'email', metadata: {} },
+    });
+
+    setTimeout(() => revokedTokens.add(jti), 50);
+    const result = await checkPromise;
+    enforcement.close();
+
+    assert.strictEqual(result.allowed, false);
+    assert.strictEqual(result.reason, 'token_revoked');
+    assert.ok(result.evidence_id);
+  });
 });
