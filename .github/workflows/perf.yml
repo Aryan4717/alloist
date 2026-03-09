@@ -35,16 +35,6 @@ jobs:
             sleep 2
           done
 
-      - name: Wait for policy service
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf -H "X-API-Key: dev-api-key" http://localhost:8001/policy > /dev/null; then
-              echo "Policy service ready"
-              break
-            fi
-            sleep 2
-          done
-
       - name: Install benchmark deps
         run: |
           pip install -r benchmarks/requirements.txt
@@ -58,7 +48,7 @@ jobs:
       - name: Run agent throughput benchmark
         run: |
           cd benchmarks
-          python agent_throughput.py --host http://localhost:8000 --policy-url http://localhost:8001 --workers 20 --duration 5 --api-key dev-api-key 2>&1 | tee agent_result.json
+          python agent_throughput.py --host http://localhost:8000 --workers 20 --duration 5 --api-key dev-api-key 2>&1 | tee agent_result.json
 
       - name: Assert thresholds and output metrics
         run: |
@@ -71,10 +61,19 @@ jobs:
           def load_json(path, default):
               try:
                   with open(path) as f:
-                      for line in f:
-                          line = line.strip()
-                          if line.startswith("{"):
-                              return json.loads(line)
+                      content = f.read()
+                  # Extract JSON (may be preceded by stderr output)
+                  start = content.find("{")
+                  if start >= 0:
+                      depth, end = 0, start
+                      for i, c in enumerate(content[start:], start):
+                          if c == "{": depth += 1
+                          elif c == "}":
+                              depth -= 1
+                              if depth == 0:
+                                  end = i + 1
+                                  break
+                      return json.loads(content[start:end])
               except (json.JSONDecodeError, FileNotFoundError):
                   pass
               return default

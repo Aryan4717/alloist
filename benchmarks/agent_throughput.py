@@ -23,9 +23,7 @@ import httpx
 def worker(
     token: str,
     api_url: str,
-    policy_url: str | None,
     api_key: str,
-    policy_api_key: str,
     duration_sec: float,
 ) -> tuple[int, int]:
     """Run check() in a loop for duration_sec. Returns (checks, errors)."""
@@ -34,8 +32,6 @@ def worker(
     enforcement = create_enforcement(
         api_url=api_url,
         api_key=api_key,
-        policy_service_url=policy_url,
-        policy_service_api_key=policy_api_key,
         fail_closed=False,
     )
     checks = 0
@@ -57,7 +53,6 @@ def worker(
 
 def run_benchmark(
     host: str,
-    policy_url: str | None,
     workers: int,
     duration_sec: float,
     api_key: str,
@@ -86,8 +81,6 @@ def run_benchmark(
                 worker,
                 token,
                 host.rstrip("/"),
-                policy_url.rstrip("/") if policy_url else None,
-                api_key,
                 api_key,
                 duration_sec,
             )
@@ -111,20 +104,13 @@ def run_benchmark(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Agent policy check throughput benchmark")
     parser.add_argument("--host", default="http://localhost:8000", help="Token service URL")
-    parser.add_argument(
-        "--policy-url",
-        default="http://localhost:8001",
-        help="Policy service URL (optional, omit to skip policy)",
-    )
     parser.add_argument("--workers", type=int, default=50, help="Concurrent workers")
     parser.add_argument("--duration", type=float, default=10.0, help="Run duration (seconds)")
     parser.add_argument("--api-key", default="dev-api-key", help="API key")
     args = parser.parse_args()
 
-    policy_url = args.policy_url if args.policy_url else None
     result = run_benchmark(
         args.host,
-        policy_url,
         args.workers,
         args.duration,
         args.api_key,

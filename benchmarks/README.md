@@ -5,8 +5,6 @@ Scale and performance tests for revocation broadcast and policy check throughput
 ## Prerequisites
 
 - Token service running (port 8000)
-- Policy service running (port 8001)
-- Redis (for revocation pub/sub)
 
 ```bash
 cd backend/token_service && docker compose up -d
@@ -40,13 +38,12 @@ python benchmarks/revoke_latency.py [--host URL] [--clients N] [--api-key KEY]
 Simulates many concurrent agents running policy checks and measures checks per second.
 
 ```bash
-python benchmarks/agent_throughput.py [--host URL] [--policy-url URL] [--workers N] [--duration SEC] [--api-key KEY]
+python benchmarks/agent_throughput.py [--host URL] [--workers N] [--duration SEC] [--api-key KEY]
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--host` | `http://localhost:8000` | Token service URL |
-| `--policy-url` | `http://localhost:8001` | Policy service URL |
 | `--workers` | `50` | Concurrent workers |
 | `--duration` | `10` | Run duration (seconds) |
 | `--api-key` | `dev-api-key` | API key |
