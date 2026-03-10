@@ -2,6 +2,8 @@
 
 import structlog
 
+from alloist_logging.processors import sanitize_exception_processor, secret_redacting_processor
+
 
 def configure_structlog() -> None:
     """Configure structlog for structured JSON logging."""
@@ -12,6 +14,8 @@ def configure_structlog() -> None:
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
+            sanitize_exception_processor,
+            secret_redacting_processor,
             structlog.processors.UnicodeDecoder(),
             structlog.processors.JSONRenderer(),
         ],

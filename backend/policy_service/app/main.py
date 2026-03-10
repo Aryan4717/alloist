@@ -16,6 +16,12 @@ from app.database import SessionLocal, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from alloist_secrets import start_rotation, validate_required
+
+    validate_required(["DATABASE_URL", "JWT_SECRET"])
+    validate_required(["POLICY_SERVICE_API_KEY"], allow_empty=True)  # Allow empty for dev
+    start_rotation()
+
     async def cleanup_loop():
         from app.services.audit_service import delete_expired_logs
 
