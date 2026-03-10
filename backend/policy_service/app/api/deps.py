@@ -145,6 +145,51 @@ def get_current_user(
     return OrgContext(user_id=api_key_row.user_id, org_id=org_id, role=ou.role)
 
 
+def require_usage_available(metric: str):
+    """Dependency that blocks request if org usage limit exceeded."""
+
+    def _check(
+        ctx: Annotated[OrgContext, Depends(get_current_user)],
+        db: Annotated[Session, Depends(get_db)],
+    ) -> OrgContext:
+        from app.services.billing_service import check_usage_limit
+
+        if not check_usage_limit(db, ctx.org_id, metric):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Usage limit exceeded for {metric}. Upgrade your plan.",
+            )
+        return ctx
+
+    return Depends(_check)
+
+
+def require_policy_evaluation_usage(*roles: OrgRole):
+    """Dependency for /policy/evaluate: checks role and enforcement_checks or policy_evaluations based on X-Request-Type."""
+
+    def _check(
+        ctx: Annotated[OrgContext, Depends(get_current_user)],
+        db: Annotated[Session, Depends(get_db)],
+        x_request_type: Annotated[str | None, Header(alias="X-Request-Type")] = None,
+    ) -> OrgContext:
+        if roles and ctx.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires role: {[r.value for r in roles]}",
+            )
+        from app.services.billing_service import check_usage_limit
+
+        metric = "enforcement_checks" if x_request_type == "enforcement" else "policy_evaluations"
+        if not check_usage_limit(db, ctx.org_id, metric):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Usage limit exceeded for {metric}. Upgrade your plan.",
+            )
+        return ctx
+
+    return Depends(_check)
+
+
 def require_role(*roles: OrgRole):
     """Dependency that requires current user to have one of the given roles."""
 

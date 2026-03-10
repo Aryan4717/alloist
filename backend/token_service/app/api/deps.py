@@ -159,6 +159,25 @@ def require_role(*roles: OrgRole):
     return Depends(_check)
 
 
+def require_usage_available(metric: str):
+    """Dependency that blocks request if org usage limit exceeded."""
+
+    def _check(
+        ctx: Annotated[OrgContext, Depends(get_current_user)],
+        db: Annotated[Session, Depends(get_db)],
+    ) -> OrgContext:
+        from app.services.billing_service import check_usage_limit
+
+        if not check_usage_limit(db, ctx.org_id, metric):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Usage limit exceeded for {metric}. Upgrade your plan.",
+            )
+        return ctx
+
+    return Depends(_check)
+
+
 def verify_api_key(
     x_api_key: Annotated[str | None, Header()] = None,
     authorization: Annotated[str | None, Header()] = None,
