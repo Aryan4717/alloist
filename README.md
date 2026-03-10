@@ -135,6 +135,12 @@ Or:
 cd packages/conformance && npm install && npm run generate && npm test
 ```
 
+## Developer Documentation
+
+- **[Architecture](docs/architecture.md)** — What Alloist does, architecture summary, key flows
+- **[Getting Started](docs/getting-started.md)** — Docker Compose, environment variables, running services
+- **[API Reference](docs/api-reference.md)** — Token API, Policy API, consent, SDK usage, evidence bundles
+
 ## Integration Guides
 
 - **[LangChain](docs/integrations/langchain.md)** — Wrap tools with `createEnforcement` before execution.
