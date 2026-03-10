@@ -5,6 +5,7 @@ alembic>=1.13
 psycopg2-binary>=2.9
 pydantic>=2.5
 pydantic-settings>=2.1
+pyjwt[crypto]>=2.8
 python-dotenv>=1.0
 httpx>=0.26
 cryptography>=42.0
