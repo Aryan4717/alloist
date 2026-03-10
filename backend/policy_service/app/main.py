@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import audit, evidence, policy
+from app.api.routes import audit, consent, evidence, policy
 from app.config import get_settings
 from app.database import SessionLocal
 
@@ -34,11 +34,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Policy Service", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "null",  # Extension popup may send null origin
+    ],
+    allow_origin_regex=r"chrome-extension://.*",  # Allow Chrome extension WebSocket connections
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 app.include_router(policy.router)
+app.include_router(consent.router)
 app.include_router(evidence.router)
 app.include_router(audit.router)
