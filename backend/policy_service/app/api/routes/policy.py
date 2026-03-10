@@ -3,7 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, verify_api_key
+from app.api.deps import OrgContext, get_db, require_role
+from app.models import OrgRole, Policy
 from app.dsl.compiler import compile_document
 from app.schemas.policy import (
     CreatePolicyRequest,
@@ -13,19 +14,23 @@ from app.schemas.policy import (
 )
 from app.schemas.policy_dsl import CompileDslRequest, CompileDslResponse
 from app.services.evaluator import evaluate
-from app.models.policy import Policy
 
 router = APIRouter(prefix="/policy", tags=["policy"])
+
+ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
+ROLE_WRITE = require_role(OrgRole.admin, OrgRole.developer)
+ROLE_ADMIN = require_role(OrgRole.admin)
 
 
 @router.post("/evaluate", response_model=EvaluateResponse)
 def evaluate_policy(
     body: EvaluateRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> EvaluateResponse:
     """Evaluate whether an action is allowed for a token."""
     result = evaluate(
+        org_id=ctx.org_id,
         token_id=body.token_id,
         action={
             "service": body.action.service,
@@ -44,7 +49,7 @@ def evaluate_policy(
 @router.post("/compile_dsl", response_model=CompileDslResponse)
 def compile_dsl(
     body: CompileDslRequest,
-    _: None = Depends(verify_api_key),
+    _: OrgContext = ROLE_WRITE,
 ) -> CompileDslResponse:
     """Compile DSL rules into evaluator rules. Returns compiled rules or errors."""
     try:
@@ -59,11 +64,12 @@ def compile_dsl(
 @router.post("", response_model=PolicyResponse)
 def create_policy(
     body: CreatePolicyRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_WRITE,
     db: Session = Depends(get_db),
 ) -> PolicyResponse:
     """Create a new policy."""
     policy = Policy(
+        org_id=ctx.org_id,
         name=body.name,
         description=body.description,
         rules=body.rules,
@@ -77,11 +83,11 @@ def create_policy(
 
 @router.get("", response_model=list[PolicyResponse])
 def list_policies(
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> list[PolicyResponse]:
-    """List all policies."""
-    policies = db.query(Policy).all()
+    """List all policies for org."""
+    policies = db.query(Policy).filter(Policy.org_id == ctx.org_id).all()
     return [PolicyResponse.model_validate(p) for p in policies]
 
 
@@ -89,11 +95,15 @@ def list_policies(
 def update_policy(
     policy_id: UUID,
     body: CreatePolicyRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_WRITE,
     db: Session = Depends(get_db),
 ) -> PolicyResponse:
     """Update a policy by id."""
-    policy = db.query(Policy).filter(Policy.id == policy_id).first()
+    policy = (
+        db.query(Policy)
+        .filter(Policy.id == policy_id, Policy.org_id == ctx.org_id)
+        .first()
+    )
     if not policy:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -111,11 +121,15 @@ def update_policy(
 @router.delete("/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_policy(
     policy_id: UUID,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_ADMIN,
     db: Session = Depends(get_db),
 ) -> None:
-    """Delete a policy by id."""
-    policy = db.query(Policy).filter(Policy.id == policy_id).first()
+    """Delete a policy by id. Admin only."""
+    policy = (
+        db.query(Policy)
+        .filter(Policy.id == policy_id, Policy.org_id == ctx.org_id)
+        .first()
+    )
     if not policy:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

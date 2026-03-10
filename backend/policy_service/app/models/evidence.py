@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.database import Base
@@ -11,6 +11,7 @@ class Evidence(Base):
     __tablename__ = "evidence"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     action_name = Column(String(255), nullable=False)
     token_snapshot = Column(JSONB, nullable=False)
     timestamp = Column(DateTime, nullable=False)
