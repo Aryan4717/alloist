@@ -4,7 +4,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import OrgContext, get_db, require_role
+from app.api.deps import OrgContext, get_db, require_role, require_usage_available
 from app.models import OrgRole
 from app.revocation_pubsub import publish_revocation
 from app.revocation_signing import sign_revocation
@@ -74,6 +74,7 @@ def create_token(
     body: MintTokenRequest,
     ctx: OrgContext = ROLE_WRITE,
     db: Session = Depends(get_db),
+    _: OrgContext = Depends(require_usage_available("tokens_created")),
 ) -> MintTokenResponse:
     """Mint a new capability token."""
     try:
@@ -89,6 +90,9 @@ def create_token(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
         )
+    from app.services.billing_service import increment_usage
+
+    increment_usage(db, ctx.org_id, "tokens_created")
     return MintTokenResponse(token=token, token_id=token_id, expires_at=expires_at)
 
 

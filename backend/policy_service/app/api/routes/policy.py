@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import OrgContext, get_db, require_role
+from app.api.deps import OrgContext, get_db, require_policy_evaluation_usage, require_role
 from app.models import OrgRole, Policy
 from app.dsl.compiler import compile_document
 from app.services.audit_service import log_audit
@@ -26,8 +26,9 @@ ROLE_ADMIN = require_role(OrgRole.admin)
 @router.post("/evaluate", response_model=EvaluateResponse)
 def evaluate_policy(
     body: EvaluateRequest,
-    ctx: OrgContext = ROLE_READ,
+    ctx: OrgContext = Depends(require_policy_evaluation_usage(OrgRole.admin, OrgRole.developer, OrgRole.viewer)),
     db: Session = Depends(get_db),
+    x_request_type: str | None = Header(None, alias="X-Request-Type"),
 ) -> EvaluateResponse:
     """Evaluate whether an action is allowed for a token."""
     result = evaluate(
@@ -53,6 +54,10 @@ def evaluate_policy(
             "action_metadata": body.action.metadata,
         },
     )
+    from app.services.billing_service import increment_usage
+
+    metric = "enforcement_checks" if x_request_type == "enforcement" else "policy_evaluations"
+    increment_usage(db, ctx.org_id, metric)
     return EvaluateResponse(
         allowed=result.allowed,
         policy_id=result.policy_id,
