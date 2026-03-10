@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Block Gmail send",
+    "description": "Deny gmail.send",
+    "rules": {
+      "effect": "deny",
+      "match": { "service": "gmail", "action_name": "send" },
+      "conditions": []
+    }
+  },
+  {
+    "name": "Block large Stripe charges",
+    "description": "Deny stripe.charge when amount > 1000",
+    "rules": {
+      "effect": "deny",
+      "match": { "service": "stripe", "action_name": "charge" },
+      "conditions": [
+        { "field": "metadata.amount", "operator": "gt", "value": 1000 }
+      ]
+    }
+  }
+]
