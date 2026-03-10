@@ -1,11 +1,10 @@
 FROM python:3.11-slim
 
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Build from repo root so ../../packages/ in requirements.txt resolves
+WORKDIR /workspace
 COPY . .
+WORKDIR /workspace/backend/policy_service
+RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8001
 
