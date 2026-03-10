@@ -88,6 +88,21 @@ class ConsentBroadcaster:
     def get_pending(self, request_id: str) -> PendingConsent | None:
         return self._pending.get(request_id)
 
+    def list_pending(self, org_id: UUID) -> list[dict[str, Any]]:
+        """Return pending consent requests for org as list of dicts."""
+        items = []
+        for pid, p in self._pending.items():
+            if p.org_id == org_id and p.status == "pending":
+                items.append({
+                    "request_id": pid,
+                    "agent_name": p.agent_name,
+                    "action": p.action,
+                    "metadata": p.metadata,
+                    "risk_level": p.risk_level,
+                    "created_at": p.created_at.isoformat(),
+                })
+        return items
+
     def get_broadcast_payload(self, request_id: str) -> dict[str, Any] | None:
         """Get payload for broadcasting (for async broadcast by route)."""
         pending = self._pending.get(request_id)

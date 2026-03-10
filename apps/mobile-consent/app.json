@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Alloist Consent",
+    "slug": "mobile-consent",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "alloist-consent",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0a6",
+          "sounds": []
+        }
+      ]
+    ]
+  }
+}
