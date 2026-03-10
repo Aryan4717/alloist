@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ApiKeyProvider } from "@/components/ApiKeyProvider";
+import { AuthProvider } from "@/components/AuthProvider";
 import { Nav } from "@/components/Nav";
+import { RequireOrg } from "@/components/RequireOrg";
 import { QuickstartOverlay } from "@/components/QuickstartOverlay";
 
 const inter = Inter({
@@ -23,13 +24,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <ApiKeyProvider>
+        <AuthProvider>
           <div className="min-h-screen bg-background">
             <Nav />
-            <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+            <main className="mx-auto max-w-6xl px-4 py-8">
+              <RequireOrg>{children}</RequireOrg>
+            </main>
             <QuickstartOverlay />
           </div>
-        </ApiKeyProvider>
+        </AuthProvider>
       </body>
     </html>
   );

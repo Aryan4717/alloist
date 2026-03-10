@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { ApiKeyConfig } from "@/components/ApiKeyConfig";
 
 export default function HomePage() {
   return (
     <div>
-      <ApiKeyConfig />
       <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
         <h1 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
           Welcome to Alloist Admin

@@ -62,26 +62,61 @@ def get_current_user(
     authorization: Annotated[str | None, Header()] = None,
 ) -> OrgContext:
     """
-    Resolve API key to user and role in org.
+    Resolve JWT or API key to user and role in org.
+    JWT takes precedence if Bearer token looks like a JWT.
     Legacy POLICY_SERVICE_API_KEY maps to default org + admin.
     """
-    api_key = _get_api_key_from_headers(x_api_key, authorization)
-    if not api_key:
+    from app.auth.jwt import decode_session_token, is_jwt_like
+
+    token = _get_api_key_from_headers(x_api_key, authorization)
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
         )
 
+    if is_jwt_like(token):
+        payload = decode_session_token(token)
+        if payload:
+            user_id = UUID(payload["sub"])
+            jwt_org_id = payload.get("org_id")
+            jwt_role = payload.get("role")
+            if jwt_org_id is None or jwt_role is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="No organization access",
+                )
+            if str(jwt_org_id) != str(org_id):
+                ou = (
+                    db.query(OrganizationUser)
+                    .filter(
+                        OrganizationUser.user_id == user_id,
+                        OrganizationUser.org_id == org_id,
+                    )
+                    .first()
+                )
+                if not ou:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="User not in organization",
+                    )
+                return OrgContext(user_id=user_id, org_id=org_id, role=ou.role)
+            return OrgContext(
+                user_id=user_id,
+                org_id=UUID(jwt_org_id),
+                role=OrgRole(jwt_role),
+            )
+
     settings = get_settings()
-    if settings.POLICY_SERVICE_API_KEY and api_key == settings.POLICY_SERVICE_API_KEY:
+    if settings.POLICY_SERVICE_API_KEY and token == settings.POLICY_SERVICE_API_KEY:
         return OrgContext(
             user_id=DEFAULT_USER_ID,
             org_id=org_id,
             role=OrgRole.admin,
         )
 
-    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
-    key_prefix = api_key[:8] if len(api_key) >= 8 else api_key.ljust(8, "x")
+    key_hash = hashlib.sha256(token.encode()).hexdigest()
+    key_prefix = token[:8] if len(token) >= 8 else token.ljust(8, "x")
     api_key_row = (
         db.query(ApiKey)
         .filter(ApiKey.key_prefix == key_prefix, ApiKey.key_hash == key_hash)
