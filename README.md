@@ -71,6 +71,16 @@ Phase 3 adds a Next.js admin console for policies, tokens, and evidence.
 cd apps/admin && npm run dev
 ```
 
+## Phase 4
+
+Phase 4 makes Alloist open-source and interoperable: ACT-lite spec, reference SDKs, and conformance tests.
+
+**See [PHASE4_README.md](PHASE4_README.md) for:**
+- 4.1 ACT-lite specification (token, evidence, revocation; JSON schemas; conformance list)
+- 4.2 Reference SDKs (ref-sdk-node, ref-sdk-py) and conformance harness
+- Integration docs (LangChain, Cursor)
+- Full testing checklist
+
 ## ACT-lite Spec (alloist/spec)
 
 The [spec/](spec/) directory contains the **Agent Capability Token (ACT-lite)** specification: token fields, evidence format, revocation semantics, key rotation, and verification steps. Includes JSON schemas, conformance tests, security recommendations, and examples. May be published as **alloist/spec**.
