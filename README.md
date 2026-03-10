@@ -113,6 +113,16 @@ Phase 7 adds logging, monitoring, and secure secret management for production re
 - 7.3 Secret loader (env/AWS/Vault cascade, rotation, startup validation)
 - Full testing checklist
 
+## Phase 8
+
+Phase 8 adds documentation, demo scripts, and the pilot kit for easy adoption and evaluation.
+
+**See [PHASE8_README.md](PHASE8_README.md) for:**
+- 8.1 Developer docs (architecture, getting-started, api-reference)
+- 8.2 Demo scripts (gmail, stripe, revoke, consent)
+- 8.3 Pilot kit (docker-compose, start.sh, examples, integration guides)
+- Full testing checklist
+
 ## ACT-lite Spec (alloist/spec)
 
 The [spec/](spec/) directory contains the **Agent Capability Token (ACT-lite)** specification: token fields, evidence format, revocation semantics, key rotation, and verification steps. Includes JSON schemas, conformance tests, security recommendations, and examples. May be published as **alloist/spec**.
@@ -134,6 +144,25 @@ Or:
 ```bash
 cd packages/conformance && npm install && npm run generate && npm test
 ```
+
+## Pilot Deployment
+
+Get a working Alloist environment in minutes:
+
+```bash
+cp .env.example .env
+./scripts/start.sh
+python examples/create_token.py
+python examples/apply_policies.py
+```
+
+See [docs/pilot.md](docs/pilot.md) for details and [docs/pilot-integration.md](docs/pilot-integration.md) for LangChain, Python, and Node integration.
+
+## Developer Documentation
+
+- **[Architecture](docs/architecture.md)** — What Alloist does, architecture summary, key flows
+- **[Getting Started](docs/getting-started.md)** — Docker Compose, environment variables, running services
+- **[API Reference](docs/api-reference.md)** — Token API, Policy API, consent, SDK usage, evidence bundles
 
 ## Integration Guides
 
