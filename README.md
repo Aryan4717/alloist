@@ -103,6 +103,16 @@ Phase 6 adds consent interfaces for approving AI agent actions in real time: a C
 - 6.2 Mobile app (pending list, push notifications, device registration)
 - Full testing checklist
 
+## Phase 7
+
+Phase 7 adds logging, monitoring, and secure secret management for production readiness.
+
+**See [PHASE7_README.md](PHASE7_README.md) for:**
+- 7.1 Structured JSON logging (secret redaction, exception sanitization)
+- 7.2 Prometheus metrics, health/ready endpoints
+- 7.3 Secret loader (env/AWS/Vault cascade, rotation, startup validation)
+- Full testing checklist
+
 ## ACT-lite Spec (alloist/spec)
 
 The [spec/](spec/) directory contains the **Agent Capability Token (ACT-lite)** specification: token fields, evidence format, revocation semantics, key rotation, and verification steps. Includes JSON schemas, conformance tests, security recommendations, and examples. May be published as **alloist/spec**.
