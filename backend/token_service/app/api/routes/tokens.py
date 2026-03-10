@@ -4,7 +4,10 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, verify_api_key
+from app.api.deps import OrgContext, get_db, require_role
+from app.models import OrgRole
+from app.revocation_pubsub import publish_revocation
+from app.revocation_signing import sign_revocation
 from app.schemas.token import (
     MintTokenRequest,
     MintTokenResponse,
@@ -15,8 +18,6 @@ from app.schemas.token import (
     ValidateTokenRequest,
     ValidateTokenResponse,
 )
-from app.revocation_pubsub import publish_revocation
-from app.revocation_signing import sign_revocation
 from app.services.token_service import (
     NoActiveSigningKeyError,
     TokenNotFoundError,
@@ -29,6 +30,10 @@ from app.ws_manager import revocation_broadcaster
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
 
+ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
+ROLE_WRITE = require_role(OrgRole.admin, OrgRole.developer)
+ROLE_ADMIN = require_role(OrgRole.admin)
+
 
 @router.get("", response_model=TokenListResponse)
 def list_tokens_endpoint(
@@ -36,11 +41,18 @@ def list_tokens_endpoint(
     subject: str | None = None,
     limit: int = 50,
     offset: int = 0,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> TokenListResponse:
     """List tokens with optional filters."""
-    items, total = list_tokens(db, status=status, subject=subject, limit=limit, offset=offset)
+    items, total = list_tokens(
+        db,
+        org_id=ctx.org_id,
+        status=status,
+        subject=subject,
+        limit=limit,
+        offset=offset,
+    )
     return TokenListResponse(
         items=[
             TokenMetadataResponse(
@@ -60,13 +72,14 @@ def list_tokens_endpoint(
 @router.post("", response_model=MintTokenResponse)
 def create_token(
     body: MintTokenRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_WRITE,
     db: Session = Depends(get_db),
 ) -> MintTokenResponse:
     """Mint a new capability token."""
     try:
         token, token_id, expires_at = mint_token(
             db,
+            org_id=ctx.org_id,
             subject=body.subject,
             scopes=body.scopes,
             ttl_seconds=body.ttl_seconds,
@@ -82,12 +95,12 @@ def create_token(
 @router.post("/revoke", response_model=RevokeTokenResponse)
 async def revoke_token_endpoint(
     body: RevokeTokenRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_ADMIN,
     db: Session = Depends(get_db),
 ) -> RevokeTokenResponse:
-    """Revoke a token by id. Broadcasts to WebSocket clients."""
+    """Revoke a token by id. Broadcasts to WebSocket clients. Admin only."""
     try:
-        revoke_token(db, body.token_id)
+        revoke_token(db, ctx.org_id, body.token_id)
     except TokenNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -104,12 +117,11 @@ async def revoke_token_endpoint(
 @router.post("/validate", response_model=ValidateTokenResponse)
 def validate_token(
     body: ValidateTokenRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> ValidateTokenResponse:
-    """Validate token: verify signature, check DB status. Returns valid, status, subject, scopes, jti."""
+    """Validate token: verify signature, check DB status."""
     from app.services.signing_service import verify_token
-
     try:
         payload = verify_token(db, body.token)
     except jwt.InvalidTokenError:
@@ -121,7 +133,7 @@ def validate_token(
             jti="",
         )
     jti = payload.get("jti", "")
-    token_row = get_token_metadata(db, UUID(jti)) if jti else None
+    token_row = get_token_metadata(db, ctx.org_id, UUID(jti)) if jti else None
     if not token_row:
         return ValidateTokenResponse(
             valid=False,
@@ -142,11 +154,11 @@ def validate_token(
 @router.get("/{token_id}", response_model=TokenMetadataResponse)
 def get_token(
     token_id: UUID,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> TokenMetadataResponse:
     """Get token metadata (no raw token value)."""
-    token_row = get_token_metadata(db, token_id)
+    token_row = get_token_metadata(db, ctx.org_id, token_id)
     if not token_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

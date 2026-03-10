@@ -111,17 +111,22 @@ def _eval_condition(operator: str, actual: Any, expected: Any) -> bool:
 
 
 def evaluate(
+    org_id: UUID,
     token_id: UUID,
     action: dict[str, Any],
     db: Session,
 ) -> EvaluationResult:
     """
     Orchestrate policy evaluation.
-    1. Validate token exists and is active
-    2. Load all policies
+    1. Validate token exists and is active (scoped to org)
+    2. Load policies for org
     3. Evaluate each policy; first matching deny wins
     """
-    token = db.get(TokenRef, token_id)
+    token = (
+        db.query(TokenRef)
+        .filter(TokenRef.id == token_id, TokenRef.org_id == org_id)
+        .first()
+    )
     if not token or token.status != TokenStatus.active:
         return EvaluationResult(
             allowed=False,
@@ -143,7 +148,7 @@ def evaluate(
         "metadata": action.get("metadata", {}),
     }
 
-    policies = db.query(Policy).all()
+    policies = db.query(Policy).filter(Policy.org_id == org_id).all()
 
     for policy in policies:
         rules = policy.rules or {}

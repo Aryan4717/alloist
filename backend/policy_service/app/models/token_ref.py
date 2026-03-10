@@ -3,7 +3,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Enum, String, Text
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from app.database import Base
@@ -21,6 +21,7 @@ class TokenRef(Base):
     __table_args__ = {"extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     subject = Column(String(255), nullable=False)
     scopes = Column(JSONB, nullable=False, default=list)
     issued_at = Column(DateTime, nullable=False)

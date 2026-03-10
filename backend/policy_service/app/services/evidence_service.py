@@ -137,6 +137,7 @@ def get_public_key_b64() -> str:
 
 def create_evidence(
     db: Session,
+    org_id: UUID,
     evidence_id: UUID,
     action_name: str,
     token_snapshot: dict[str, Any],
@@ -166,6 +167,7 @@ def create_evidence(
 
     evidence_row = Evidence(
         id=evidence_id,
+        org_id=org_id,
         action_name=action_name,
         token_snapshot=token_snapshot,
         timestamp=timestamp,
@@ -181,13 +183,15 @@ def create_evidence(
     return evidence_row
 
 
-def get_evidence(db: Session, evidence_id: UUID) -> Evidence | None:
-    """Fetch evidence by id."""
-    return db.get(Evidence, evidence_id)
+def get_evidence(db: Session, org_id: UUID, evidence_id: UUID) -> Evidence | None:
+    """Fetch evidence by id, scoped to org."""
+    row = db.get(Evidence, evidence_id)
+    return row if row and row.org_id == org_id else None
 
 
 def list_evidence(
     db: Session,
+    org_id: UUID,
     result: str | None = None,
     action_name: str | None = None,
     since: datetime | None = None,
@@ -195,7 +199,7 @@ def list_evidence(
     offset: int = 0,
 ) -> tuple[list[Evidence], int]:
     """List evidence with optional filters. Returns (items, total)."""
-    q = db.query(Evidence)
+    q = db.query(Evidence).filter(Evidence.org_id == org_id)
     if result:
         q = q.filter(Evidence.result == result)
     if action_name:
