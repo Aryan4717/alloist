@@ -20,6 +20,7 @@ class EvaluateResponse(BaseModel):
     allowed: bool
     policy_id: UUID | None = None
     reason: str | None = None
+    consent_request_id: str | None = None
 
 
 class CreatePolicyRequest(BaseModel):

@@ -24,7 +24,7 @@ ROLE_ADMIN = require_role(OrgRole.admin)
 
 
 @router.post("/evaluate", response_model=EvaluateResponse)
-def evaluate_policy(
+async def evaluate_policy(
     body: EvaluateRequest,
     ctx: OrgContext = require_policy_evaluation_usage(OrgRole.admin, OrgRole.developer, OrgRole.viewer),
     db: Session = Depends(get_db),
@@ -42,18 +42,28 @@ def evaluate_policy(
         db=db,
     )
     action_str = f"{body.action.service}.{body.action.name}"
+    audit_result = "allow" if result.allowed else ("pending" if result.consent_request_id else "deny")
     log_audit(
         db,
         org_id=ctx.org_id,
         action=action_str,
-        result="allow" if result.allowed else "deny",
+        result=audit_result,
         metadata={
             "token_id": str(body.token_id),
             "policy_id": str(result.policy_id) if result.policy_id else None,
             "reason": result.reason,
+            "consent_request_id": result.consent_request_id,
             "action_metadata": body.action.metadata,
         },
     )
+    if result.consent_request_id:
+        from app.consent_manager import consent_broadcaster
+        from app.services.push_service import send_consent_push
+
+        payload = consent_broadcaster.get_broadcast_payload(result.consent_request_id)
+        if payload:
+            await consent_broadcaster.broadcast_consent_request(payload)
+            send_consent_push(db, ctx.org_id, payload)
     from app.services.billing_service import increment_usage
 
     metric = "enforcement_checks" if x_request_type == "enforcement" else "policy_evaluations"
@@ -62,6 +72,7 @@ def evaluate_policy(
         allowed=result.allowed,
         policy_id=result.policy_id,
         reason=result.reason,
+        consent_request_id=result.consent_request_id,
     )
 
 

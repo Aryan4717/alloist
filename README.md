@@ -17,7 +17,9 @@ Alloist gates AI agent actions (e.g., send email, charge payment) using:
 alloist/
 ├── spec/                   # ACT-lite spec (alloist/spec)
 ├── apps/
-│   └── admin/              # Next.js admin UI (Phase 3)
+│   ├── admin/              # Next.js admin UI (Phase 3)
+│   ├── browser-extension/  # Chrome extension for consent (Phase 6)
+│   └── mobile-consent/     # React Native app for consent (Phase 6)
 ├── backend/
 │   ├── token_service/       # Mints tokens, revocation, JWKS (port 8000)
 │   ├── policy_service/      # Policy evaluation, evidence export (port 8001)
@@ -90,6 +92,15 @@ Phase 5 makes Alloist team-ready and production-oriented: org RBAC, audit retent
 - 5.2 Audit retention (retention_days, auto-cleanup, list/export)
 - 5.3 SSO (OAuth Google/GitHub, JWT sessions, admin login)
 - 5.4 Billing stub (subscriptions, usage limits, Stripe placeholder)
+- Full testing checklist
+
+## Phase 6
+
+Phase 6 adds consent interfaces for approving AI agent actions in real time: a Chrome extension and a React Native mobile app.
+
+**See [PHASE6_README.md](PHASE6_README.md) for:**
+- 6.1 Browser extension (WebSocket, popup, Approve/Deny)
+- 6.2 Mobile app (pending list, push notifications, device registration)
 - Full testing checklist
 
 ## ACT-lite Spec (alloist/spec)
