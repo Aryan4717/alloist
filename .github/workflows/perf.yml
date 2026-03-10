@@ -18,6 +18,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Create .env for CI
+        run: |
+          cat > .env << 'EOF'
+          TOKEN_SERVICE_API_KEY=dev-api-key
+          POLICY_SERVICE_API_KEY=dev-api-key
+          JWT_SECRET=ci-secret-for-testing
+          EOF
+
       - name: Start services
         run: |
           cd backend/token_service
