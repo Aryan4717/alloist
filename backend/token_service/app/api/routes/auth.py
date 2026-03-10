@@ -4,6 +4,8 @@ from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+
+from alloist_logging import get_logger, log_event
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -20,6 +22,7 @@ from app.config import get_settings
 from app.models import Organization, OrganizationUser, User, UserOAuthIdentity
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = get_logger("token_service")
 
 OAUTH_STATE_COOKIE = "oauth_state"
 
@@ -114,6 +117,7 @@ async def google_callback(
     """Exchange Google code, create/fetch user, issue JWT, redirect to frontend."""
     settings = get_settings()
     if error:
+        log_event(logger, action="auth_login", result="error", provider="google", error=error)
         redirect_url = f"{settings.AUTH_CALLBACK_URL}?error={error}"
         return RedirectResponse(url=redirect_url, status_code=302)
     if not code:
@@ -125,6 +129,7 @@ async def google_callback(
     try:
         user_info = await exchange_google_code(code)
     except Exception as e:
+        log_event(logger, action="auth_login", result="error", provider="google", error=str(e))
         raise HTTPException(status_code=400, detail=f"OAuth exchange failed: {e}")
 
     email = user_info.get("email") or ""
@@ -141,6 +146,15 @@ async def google_callback(
     if orgs:
         org_id = UUID(orgs[0]["id"])
         role = orgs[0]["role"]
+
+    log_event(
+        logger,
+        action="auth_login",
+        result="success",
+        provider="google",
+        user_id=str(user.id),
+        org_id=str(org_id) if org_id else None,
+    )
 
     token = encode_session_token(
         user_id=user.id,
@@ -191,6 +205,7 @@ async def github_callback(
     settings = get_settings()
     if error:
         msg = error_description or error
+        log_event(logger, action="auth_login", result="error", provider="github", error=msg)
         redirect_url = f"{settings.AUTH_CALLBACK_URL}?error={msg}"
         return RedirectResponse(url=redirect_url, status_code=302)
     if not code:
@@ -201,6 +216,7 @@ async def github_callback(
     try:
         user_info = await exchange_github_code(code)
     except Exception as e:
+        log_event(logger, action="auth_login", result="error", provider="github", error=str(e))
         raise HTTPException(status_code=400, detail=f"OAuth exchange failed: {e}")
 
     email = user_info.get("email", "")
@@ -217,6 +233,15 @@ async def github_callback(
     if orgs:
         org_id = UUID(orgs[0]["id"])
         role = orgs[0]["role"]
+
+    log_event(
+        logger,
+        action="auth_login",
+        result="success",
+        provider="github",
+        user_id=str(user.id),
+        org_id=str(org_id) if org_id else None,
+    )
 
     token = encode_session_token(
         user_id=user.id,
