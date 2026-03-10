@@ -4,6 +4,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from alloist_logging import get_logger, log_event
+from alloist_metrics import create_metrics
 from sqlalchemy.orm import Session
 
 from app.api.deps import OrgContext, get_db, require_role, require_usage_available
@@ -32,6 +33,7 @@ from app.ws_manager import revocation_broadcaster
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
 logger = get_logger("token_service")
+metrics = create_metrics("token_service")
 
 ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
 ROLE_WRITE = require_role(OrgRole.admin, OrgRole.developer)
@@ -113,6 +115,7 @@ def create_token(
     from app.services.billing_service import increment_usage
 
     increment_usage(db, ctx.org_id, "tokens_created")
+    metrics.inc_token_issuance()
     return MintTokenResponse(token=token, token_id=token_id, expires_at=expires_at)
 
 
@@ -147,6 +150,7 @@ async def revoke_token_endpoint(
         user_id=ctx.user_id,
         token_id=str(body.token_id),
     )
+    metrics.inc_revocation_events()
     token_id_str = str(body.token_id)
     signed_payload = sign_revocation(token_id_str)
     published = await publish_revocation(signed_payload)
