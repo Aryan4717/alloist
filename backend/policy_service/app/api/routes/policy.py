@@ -26,7 +26,7 @@ ROLE_ADMIN = require_role(OrgRole.admin)
 @router.post("/evaluate", response_model=EvaluateResponse)
 def evaluate_policy(
     body: EvaluateRequest,
-    ctx: OrgContext = Depends(require_policy_evaluation_usage(OrgRole.admin, OrgRole.developer, OrgRole.viewer)),
+    ctx: OrgContext = require_policy_evaluation_usage(OrgRole.admin, OrgRole.developer, OrgRole.viewer),
     db: Session = Depends(get_db),
     x_request_type: str | None = Header(None, alias="X-Request-Type"),
 ) -> EvaluateResponse:

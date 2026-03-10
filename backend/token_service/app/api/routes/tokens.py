@@ -74,7 +74,7 @@ def create_token(
     body: MintTokenRequest,
     ctx: OrgContext = ROLE_WRITE,
     db: Session = Depends(get_db),
-    _: OrgContext = Depends(require_usage_available("tokens_created")),
+    _: OrgContext = require_usage_available("tokens_created"),
 ) -> MintTokenResponse:
     """Mint a new capability token."""
     try:
