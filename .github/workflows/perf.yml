@@ -20,7 +20,8 @@ jobs:
 
       - name: Create .env for CI
         run: |
-          cat > .env << 'EOF'
+          mkdir -p backend/token_service
+          cat > backend/token_service/.env << 'EOF'
           TOKEN_SERVICE_API_KEY=dev-api-key
           POLICY_SERVICE_API_KEY=dev-api-key
           JWT_SECRET=ci-secret-for-testing

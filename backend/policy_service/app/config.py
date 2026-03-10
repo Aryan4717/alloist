@@ -1,5 +1,17 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from alloist_secrets import get, register_secret_key
+
+# Register keys for log redaction
+for _key in (
+    "POLICY_SERVICE_API_KEY",
+    "JWT_SECRET",
+    "EVIDENCE_SIGNING_PRIVATE_KEY",
+    "EVIDENCE_SIGNING_PUBLIC_KEY",
+    "DATABASE_URL",
+):
+    register_secret_key(_key)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -8,13 +20,30 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/token_service"
-    POLICY_SERVICE_API_KEY: str = ""
-    EVIDENCE_SIGNING_PRIVATE_KEY: str = ""
-    EVIDENCE_SIGNING_PUBLIC_KEY: str = ""
+    # Non-secret config
     AUDIT_CLEANUP_INTERVAL_SEC: int = 3600
-    JWT_SECRET: str = "change-me-in-production"
     JWT_ALGORITHM: str = "HS256"
+
+    # Secret fields - loaded via secrets.get() on access
+    @property
+    def DATABASE_URL(self) -> str:
+        return get("DATABASE_URL") or "postgresql://postgres:postgres@localhost:5432/token_service"
+
+    @property
+    def POLICY_SERVICE_API_KEY(self) -> str:
+        return get("POLICY_SERVICE_API_KEY") or ""
+
+    @property
+    def EVIDENCE_SIGNING_PRIVATE_KEY(self) -> str:
+        return get("EVIDENCE_SIGNING_PRIVATE_KEY") or ""
+
+    @property
+    def EVIDENCE_SIGNING_PUBLIC_KEY(self) -> str:
+        return get("EVIDENCE_SIGNING_PUBLIC_KEY") or ""
+
+    @property
+    def JWT_SECRET(self) -> str:
+        return get("JWT_SECRET") or "change-me-in-production"
 
 
 _settings: Settings | None = None
