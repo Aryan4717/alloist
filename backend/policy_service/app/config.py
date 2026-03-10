@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     POLICY_SERVICE_API_KEY: str = ""
     EVIDENCE_SIGNING_PRIVATE_KEY: str = ""
     EVIDENCE_SIGNING_PUBLIC_KEY: str = ""
+    AUDIT_CLEANUP_INTERVAL_SEC: int = 3600
 
 
 _settings: Settings | None = None

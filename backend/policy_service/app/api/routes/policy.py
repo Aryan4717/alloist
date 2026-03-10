@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import OrgContext, get_db, require_role
 from app.models import OrgRole, Policy
 from app.dsl.compiler import compile_document
+from app.services.audit_service import log_audit
 from app.schemas.policy import (
     CreatePolicyRequest,
     EvaluateRequest,
@@ -38,6 +39,19 @@ def evaluate_policy(
             "metadata": body.action.metadata,
         },
         db=db,
+    )
+    action_str = f"{body.action.service}.{body.action.name}"
+    log_audit(
+        db,
+        org_id=ctx.org_id,
+        action=action_str,
+        result="allow" if result.allowed else "deny",
+        metadata={
+            "token_id": str(body.token_id),
+            "policy_id": str(result.policy_id) if result.policy_id else None,
+            "reason": result.reason,
+            "action_metadata": body.action.metadata,
+        },
     )
     return EvaluateResponse(
         allowed=result.allowed,
