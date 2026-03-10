@@ -81,6 +81,17 @@ Phase 4 makes Alloist open-source and interoperable: ACT-lite spec, reference SD
 - Integration docs (LangChain, Cursor)
 - Full testing checklist
 
+## Phase 5
+
+Phase 5 makes Alloist team-ready and production-oriented: org RBAC, audit retention, SSO, and billing foundation.
+
+**See [PHASE5_README.md](PHASE5_README.md) for:**
+- 5.1 Organization RBAC (admin/developer/viewer roles)
+- 5.2 Audit retention (retention_days, auto-cleanup, list/export)
+- 5.3 SSO (OAuth Google/GitHub, JWT sessions, admin login)
+- 5.4 Billing stub (subscriptions, usage limits, Stripe placeholder)
+- Full testing checklist
+
 ## ACT-lite Spec (alloist/spec)
 
 The [spec/](spec/) directory contains the **Agent Capability Token (ACT-lite)** specification: token fields, evidence format, revocation semantics, key rotation, and verification steps. Includes JSON schemas, conformance tests, security recommendations, and examples. May be published as **alloist/spec**.
