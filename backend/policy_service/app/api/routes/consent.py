@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import OrgContext, get_db, require_role
 from app.consent_manager import consent_broadcaster
-from app.models import OrgRole
+from app.models import OrgRole, PushToken
 from app.services.audit_service import log_audit
+from app.services.push_service import send_consent_push
 
 router = APIRouter(prefix="/consent", tags=["consent"])
 
@@ -42,6 +43,73 @@ class ConsentDecisionSchema(BaseModel):
 class ConsentDecisionResponse(BaseModel):
     request_id: str
     decision: str
+
+
+class PendingRequestItem(BaseModel):
+    request_id: str
+    agent_name: str
+    action: dict
+    metadata: dict
+    risk_level: str
+    created_at: str
+
+
+class PendingListResponse(BaseModel):
+    requests: list[PendingRequestItem]
+
+
+class RegisterDeviceSchema(BaseModel):
+    expo_push_token: str = Field(..., min_length=1)
+    device_id: str | None = None
+
+
+class RegisterDeviceResponse(BaseModel):
+    ok: bool = True
+
+
+@router.get("/pending", response_model=PendingListResponse)
+def list_pending_requests(ctx: OrgContext = ROLE_READ) -> PendingListResponse:
+    """List pending consent requests for the org."""
+    items = consent_broadcaster.list_pending(ctx.org_id)
+    return PendingListResponse(
+        requests=[
+            PendingRequestItem(
+                request_id=r["request_id"],
+                agent_name=r["agent_name"],
+                action=r["action"],
+                metadata=r["metadata"],
+                risk_level=r["risk_level"],
+                created_at=r["created_at"],
+            )
+            for r in items
+        ]
+    )
+
+
+@router.post("/register-device", response_model=RegisterDeviceResponse)
+def register_device(
+    body: RegisterDeviceSchema,
+    ctx: OrgContext = ROLE_READ,
+    db: Session = Depends(get_db),
+) -> RegisterDeviceResponse:
+    """Register a device for push notifications."""
+    existing = (
+        db.query(PushToken)
+        .filter(
+            PushToken.org_id == ctx.org_id,
+            PushToken.expo_push_token == body.expo_push_token,
+        )
+        .first()
+    )
+    if not existing:
+        token = PushToken(
+            org_id=ctx.org_id,
+            expo_push_token=body.expo_push_token,
+            device_id=body.device_id,
+        )
+        db.add(token)
+        db.commit()
+    return RegisterDeviceResponse()
 
 
 @router.websocket("/ws")
@@ -80,6 +148,7 @@ async def create_consent_request(
         risk_level=body.risk_level,
     )
     await consent_broadcaster.broadcast_consent_request(payload)
+    send_consent_push(db, ctx.org_id, payload)
     return ConsentRequestResponse(request_id=request_id)
 
 

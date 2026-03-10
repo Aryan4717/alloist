@@ -58,10 +58,12 @@ async def evaluate_policy(
     )
     if result.consent_request_id:
         from app.consent_manager import consent_broadcaster
+        from app.services.push_service import send_consent_push
 
         payload = consent_broadcaster.get_broadcast_payload(result.consent_request_id)
         if payload:
             await consent_broadcaster.broadcast_consent_request(payload)
+            send_consent_push(db, ctx.org_id, payload)
     from app.services.billing_service import increment_usage
 
     metric = "enforcement_checks" if x_request_type == "enforcement" else "policy_evaluations"

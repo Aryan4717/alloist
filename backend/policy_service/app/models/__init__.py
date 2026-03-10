@@ -6,6 +6,7 @@ from app.models.audit_log import AuditLog
 from app.models.organization import Organization
 from app.models.subscription import Subscription
 from app.models.org_usage import OrgUsage
+from app.models.push_token import PushToken
 
 __all__ = [
     "Evidence",
@@ -17,4 +18,5 @@ __all__ = [
     "Organization",
     "Subscription",
     "OrgUsage",
+    "PushToken",
 ]
