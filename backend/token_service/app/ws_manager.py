@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import json
-import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import WebSocket
 
+from alloist_logging import get_logger
+
 from app.revocation_pubsub import start_revocation_subscriber
 from app.revocation_signing import verify_revocation
 
-logger = logging.getLogger(__name__)
+logger = get_logger("token_service")
 
 
 @dataclass
@@ -34,7 +35,7 @@ class RevocationBroadcaster:
 
         async def on_redis_message(payload: dict[str, Any]) -> None:
             if not verify_revocation(payload.copy()):
-                logger.warning("Invalid revocation payload ignored")
+                logger.warning("invalid_revocation_payload_ignored")
                 return
             token_id = payload.get("token_id")
             if token_id:

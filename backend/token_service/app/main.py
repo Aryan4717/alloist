@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from alloist_logging import logging_middleware
+
 from app.api.routes import auth, billing, keys, tokens, websocket
 
 app = FastAPI(title="Token Service", version="0.1.0")
+app.add_middleware(logging_middleware("token_service"))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],

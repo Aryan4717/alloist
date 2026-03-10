@@ -1,6 +1,9 @@
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+
+from alloist_logging import get_logger, log_event
 from sqlalchemy.orm import Session
 
 from app.api.deps import OrgContext, get_db, require_policy_evaluation_usage, require_role
@@ -17,6 +20,7 @@ from app.schemas.policy_dsl import CompileDslRequest, CompileDslResponse
 from app.services.evaluator import evaluate
 
 router = APIRouter(prefix="/policy", tags=["policy"])
+logger = get_logger("policy_service")
 
 ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
 ROLE_WRITE = require_role(OrgRole.admin, OrgRole.developer)
@@ -31,6 +35,7 @@ async def evaluate_policy(
     x_request_type: str | None = Header(None, alias="X-Request-Type"),
 ) -> EvaluateResponse:
     """Evaluate whether an action is allowed for a token."""
+    start = time.perf_counter()
     result = evaluate(
         org_id=ctx.org_id,
         token_id=body.token_id,
@@ -41,8 +46,19 @@ async def evaluate_policy(
         },
         db=db,
     )
+    latency_ms = (time.perf_counter() - start) * 1000
     action_str = f"{body.action.service}.{body.action.name}"
     audit_result = "allow" if result.allowed else ("pending" if result.consent_request_id else "deny")
+    log_event(
+        logger,
+        action="policy_evaluated",
+        result=audit_result,
+        org_id=ctx.org_id,
+        user_id=ctx.user_id,
+        action_name=action_str,
+        policy_id=str(result.policy_id) if result.policy_id else None,
+        latency_ms=latency_ms,
+    )
     log_audit(
         db,
         org_id=ctx.org_id,

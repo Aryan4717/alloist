@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from typing import Any, Callable
 
 from redis.asyncio import Redis
 
+from alloist_logging import get_logger
+
 from app.config import get_settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger("token_service")
 
 CHANNEL = "revocations"
 
@@ -30,7 +31,7 @@ async def get_redis() -> Redis | None:
         await _redis.ping()
         return _redis
     except Exception as e:
-        logger.warning("Redis unavailable: %s", e)
+        logger.warning("redis_unavailable", error=str(e))
         return None
 
 
@@ -44,7 +45,7 @@ async def publish_revocation(signed_payload: dict[str, Any]) -> bool:
         await redis.publish(CHANNEL, message)
         return True
     except Exception as e:
-        logger.warning("Redis publish failed: %s", e)
+        logger.warning("redis_publish_failed", error=str(e))
         return False
 
 
@@ -71,11 +72,11 @@ async def subscribe_revocation(
                 payload = json.loads(data)
                 await callback(payload)
             except (json.JSONDecodeError, TypeError) as e:
-                logger.warning("Invalid revocation message: %s", e)
+                logger.warning("invalid_revocation_message", error=str(e))
     except asyncio.CancelledError:
         raise
     except Exception as e:
-        logger.warning("Revocation subscribe error: %s", e)
+        logger.warning("revocation_subscribe_error", error=str(e))
     finally:
         try:
             await pubsub.aclose()
@@ -98,7 +99,7 @@ def start_revocation_subscriber(
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.warning("Revocation subscriber error: %s", e)
+                logger.warning("revocation_subscriber_error", error=str(e))
                 await asyncio.sleep(5)
 
     _pubsub_task = asyncio.create_task(_run())
