@@ -17,6 +17,7 @@ class EvaluationResult:
     allowed: bool
     policy_id: UUID | None
     reason: str | None
+    consent_request_id: str | None = None
 
 
 def _get_nested(obj: dict, path: str) -> Any:
@@ -166,6 +167,24 @@ def evaluate(
                 allowed=False,
                 policy_id=policy.id,
                 reason=reason,
+            )
+        if effect == "require_consent":
+            from app.consent_manager import consent_broadcaster
+
+            agent_name = token.subject or "agent"
+            request_id, _ = consent_broadcaster.create_consent_request(
+                org_id=org_id,
+                token_id=token_id,
+                agent_name=agent_name,
+                action=action_dict,
+                metadata=action_dict.get("metadata", {}),
+                risk_level="medium",
+            )
+            return EvaluationResult(
+                allowed=False,
+                policy_id=policy.id,
+                reason="pending_consent",
+                consent_request_id=request_id,
             )
 
     return EvaluationResult(
