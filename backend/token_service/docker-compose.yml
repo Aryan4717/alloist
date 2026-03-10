@@ -28,6 +28,8 @@ services:
   token_service:
     build: .
     restart: unless-stopped
+    env_file:
+      - ../../.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
       REDIS_URL: redis://redis:6379/0
@@ -43,6 +45,8 @@ services:
 
   policy_service:
     build: ../policy_service
+    env_file:
+      - ../../.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
       POLICY_SERVICE_API_KEY: ${POLICY_SERVICE_API_KEY:-dev-api-key}

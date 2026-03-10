@@ -10,8 +10,7 @@ import {
   type DslRule,
   type Policy,
 } from "@/lib/api";
-import { useApiKey } from "@/components/ApiKeyProvider";
-import { ApiKeyConfig } from "@/components/ApiKeyConfig";
+import { useAuth } from "@/components/AuthProvider";
 import { POLICY_TEMPLATES, type PolicyTemplate } from "@/lib/templates";
 
 const DEFAULT_DSL = `[
@@ -28,7 +27,8 @@ const DEFAULT_DSL = `[
 ]`;
 
 export default function PoliciesPage() {
-  const { apiKey, isConfigured } = useApiKey();
+  const { jwt, orgId, isConfigured } = useAuth();
+  const auth = { jwt, orgId };
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,14 +52,14 @@ export default function PoliciesPage() {
     setLoading(true);
     setError(null);
     try {
-      const list = await listPolicies(apiKey);
+      const list = await listPolicies(auth);
       setPolicies(list);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load policies");
     } finally {
       setLoading(false);
     }
-  }, [apiKey, isConfigured]);
+  }, [jwt, orgId, isConfigured]);
 
   useEffect(() => {
     fetchPolicies();
@@ -121,7 +121,7 @@ export default function PoliciesPage() {
           effect: (o.effect === "allow" || o.effect === "deny" ? o.effect : "deny") as "allow" | "deny",
         };
       });
-      const res = await compilePolicyDsl(apiKey, { rules });
+      const res = await compilePolicyDsl(auth, { rules });
       if (res.errors && res.errors.length > 0) {
         setValidateResult({ success: false, errors: res.errors });
       } else if (res.rules) {
@@ -171,14 +171,14 @@ export default function PoliciesPage() {
 
     try {
       if (editing) {
-        await updatePolicy(apiKey, editing.id, {
+        await updatePolicy(auth, editing.id, {
           name: name.trim(),
           description: description.trim() || undefined,
           rules,
           dsl: dslPayload,
         });
       } else {
-        await createPolicy(apiKey, {
+        await createPolicy(auth, {
           name: name.trim(),
           description: description.trim() || undefined,
           rules,
@@ -199,7 +199,7 @@ export default function PoliciesPage() {
   const handleDelete = async (p: Policy) => {
     if (!isConfigured || !confirm(`Delete policy "${p.name}"?`)) return;
     try {
-      await deletePolicy(apiKey, p.id);
+      await deletePolicy(auth, p.id);
       fetchPolicies();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete");
@@ -214,7 +214,6 @@ export default function PoliciesPage() {
 
   return (
     <div>
-      <ApiKeyConfig />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">

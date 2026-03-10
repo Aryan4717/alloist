@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import keys, tokens, websocket
+from app.api.routes import auth, keys, tokens, websocket
 
 app = FastAPI(title="Token Service", version="0.1.0")
 app.add_middleware(
@@ -14,3 +14,4 @@ app.add_middleware(
 app.include_router(tokens.router)
 app.include_router(keys.router)
 app.include_router(websocket.router)
+app.include_router(auth.router)
