@@ -26,14 +26,15 @@ services:
       retries: 5
 
   token_service:
-    build: .
+    build:
+      context: ../..
+      dockerfile: backend/token_service/Dockerfile
     restart: unless-stopped
-    env_file:
-      - ../../.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
       REDIS_URL: redis://redis:6379/0
       TOKEN_SERVICE_API_KEY: ${TOKEN_SERVICE_API_KEY:-dev-api-key}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
     ports:
       - "8000:8000"
     depends_on:
@@ -44,12 +45,13 @@ services:
     entrypoint: ["/bin/sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 
   policy_service:
-    build: ../policy_service
-    env_file:
-      - ../../.env
+    build:
+      context: ../..
+      dockerfile: backend/policy_service/Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
       POLICY_SERVICE_API_KEY: ${POLICY_SERVICE_API_KEY:-dev-api-key}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
     ports:
       - "8001:8001"
     depends_on:

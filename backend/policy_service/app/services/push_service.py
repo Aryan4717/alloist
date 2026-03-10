@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 from uuid import UUID
 
 import httpx
 from sqlalchemy.orm import Session
 
+from alloist_logging import get_logger
+
 from app.models import PushToken
 
-logger = logging.getLogger(__name__)
+logger = get_logger("policy_service")
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
@@ -53,12 +54,12 @@ def send_consent_push(db: Session, org_id: UUID, payload: dict[str, Any]) -> Non
         with httpx.Client(timeout=10.0) as client:
             resp = client.post(EXPO_PUSH_URL, json=messages)
             if resp.status_code != 200:
-                logger.warning("Expo push failed: %s %s", resp.status_code, resp.text)
+                logger.warning("expo_push_failed", status_code=resp.status_code, response=resp.text)
             else:
                 data = resp.json()
                 if isinstance(data, dict) and data.get("data"):
                     for i, r in enumerate(data["data"]):
                         if isinstance(r, dict) and r.get("status") == "error":
-                            logger.warning("Expo push error for token %s: %s", i, r.get("message"))
+                            logger.warning("expo_push_failed", token_index=i, message=r.get("message"))
     except Exception as e:
-        logger.exception("Expo push failed: %s", e)
+        logger.exception("expo_push_failed", error=str(e))

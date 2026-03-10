@@ -4,6 +4,9 @@ import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+
+from alloist_logging import get_logger, log_event
+from alloist_metrics import create_metrics
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -14,6 +17,8 @@ from app.services.audit_service import log_audit
 from app.services.push_service import send_consent_push
 
 router = APIRouter(prefix="/consent", tags=["consent"])
+logger = get_logger("policy_service")
+metrics = create_metrics("policy_service")
 
 ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
 
@@ -147,6 +152,7 @@ async def create_consent_request(
         metadata=act.metadata,
         risk_level=body.risk_level,
     )
+    metrics.inc_consent_requests()
     await consent_broadcaster.broadcast_consent_request(payload)
     send_consent_push(db, ctx.org_id, payload)
     return ConsentRequestResponse(request_id=request_id)
@@ -170,6 +176,16 @@ async def submit_consent_decision(
 
     consent_broadcaster.set_decision(body.request_id, body.decision)
     action_str = f"{pending.action.get('service', '')}.{pending.action.get('name', '')}"
+
+    log_event(
+        logger,
+        action="consent_decision",
+        result=body.decision,
+        org_id=ctx.org_id,
+        user_id=ctx.user_id,
+        consent_request_id=body.request_id,
+        action_name=action_str,
+    )
 
     log_audit(
         db,

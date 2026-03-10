@@ -2,6 +2,9 @@ from uuid import UUID
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+
+from alloist_logging import get_logger, log_event
+from alloist_metrics import create_metrics
 from sqlalchemy.orm import Session
 
 from app.api.deps import OrgContext, get_db, require_role, require_usage_available
@@ -29,6 +32,8 @@ from app.services.token_service import (
 from app.ws_manager import revocation_broadcaster
 
 router = APIRouter(prefix="/tokens", tags=["tokens"])
+logger = get_logger("token_service")
+metrics = create_metrics("token_service")
 
 ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
 ROLE_WRITE = require_role(OrgRole.admin, OrgRole.developer)
@@ -86,13 +91,31 @@ def create_token(
             ttl_seconds=body.ttl_seconds,
         )
     except NoActiveSigningKeyError as e:
+        log_event(
+            logger,
+            action="token_created",
+            result="error",
+            org_id=ctx.org_id,
+            user_id=ctx.user_id,
+            error=str(e),
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
         )
+    log_event(
+        logger,
+        action="token_created",
+        result="success",
+        org_id=ctx.org_id,
+        user_id=ctx.user_id,
+        token_id=str(token_id),
+        subject=body.subject,
+    )
     from app.services.billing_service import increment_usage
 
     increment_usage(db, ctx.org_id, "tokens_created")
+    metrics.inc_token_issuance()
     return MintTokenResponse(token=token, token_id=token_id, expires_at=expires_at)
 
 
@@ -106,10 +129,28 @@ async def revoke_token_endpoint(
     try:
         revoke_token(db, ctx.org_id, body.token_id)
     except TokenNotFoundError as e:
+        log_event(
+            logger,
+            action="token_revoked",
+            result="error",
+            org_id=ctx.org_id,
+            user_id=ctx.user_id,
+            token_id=str(body.token_id),
+            error=str(e),
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+    log_event(
+        logger,
+        action="token_revoked",
+        result="success",
+        org_id=ctx.org_id,
+        user_id=ctx.user_id,
+        token_id=str(body.token_id),
+    )
+    metrics.inc_revocation_events()
     token_id_str = str(body.token_id)
     signed_payload = sign_revocation(token_id_str)
     published = await publish_revocation(signed_payload)

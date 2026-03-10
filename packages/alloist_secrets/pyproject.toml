@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alloist-secrets"
+version = "0.1.0"
+description = "Secure secret management with env, AWS Secrets Manager, Vault support"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.28.0"]
+vault = ["hvac>=2.0.0"]
+dev = ["pytest>=7.4"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["alloist_secrets*"]
