@@ -1,0 +1,8 @@
+{
+  "token_id": "conformance-revoke-stale",
+  "event": "revoked",
+  "ts": "2026-03-09T16:17:07.949Z",
+  "nonce": "bde7ce54-db40-4b2e-b87c-379952b99b51",
+  "kid": "revocation",
+  "signature": "0agpF2Y0W1pDZXiCbRuvzzihDJksf3WaiFX+taOF4FsvPZQfbsJjDjhtWh8VNZjtAFHuU8jfys20TPt9kvU2Aw=="
+}

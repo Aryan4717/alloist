@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 
-# Ensure cognara_enforce is importable
+# Ensure alloist_enforce is importable
 _repo_root = Path(__file__).resolve().parents[3]
 _enforcement_path = _repo_root / "packages" / "enforcement_py"
 if _enforcement_path.exists():
@@ -17,7 +17,7 @@ if _enforcement_path.exists():
 import httpx
 
 # Import after path setup
-from cognara_enforce import create_enforcement
+from alloist_enforce import create_enforcement
 
 
 def create_token(

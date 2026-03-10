@@ -1,17 +1,17 @@
-# @cognara/enforcement
+# @alloist/enforcement
 
 Tiny Node.js SDK for token and policy enforcement with offline caching, TTL checks, and real-time revocation via WebSocket.
 
 ## Installation
 
 ```bash
-npm install @cognara/enforcement
+npm install @alloist/enforcement
 ```
 
 ## Usage
 
 ```javascript
-const { createEnforcement } = require('@cognara/enforcement');
+const { createEnforcement } = require('@alloist/enforcement');
 
 const enforcement = createEnforcement({
   apiUrl: 'http://localhost:8000',

@@ -1,11 +1,11 @@
-# cognara-enforce
+# alloist-enforce
 
-Python SDK for token and policy enforcement with offline caching, TTL checks, and real-time revocation via WebSocket. Mirrors the Node.js `@cognara/enforcement` SDK.
+Python SDK for token and policy enforcement with offline caching, TTL checks, and real-time revocation via WebSocket. Mirrors the Node.js `@alloist/enforcement` SDK.
 
 ## Installation
 
 ```bash
-pip install cognara-enforce
+pip install alloist-enforce
 ```
 
 Or from source:
@@ -17,7 +17,7 @@ cd packages/enforcement_py && pip install -e .
 ## Usage
 
 ```python
-from cognara_enforce import create_enforcement
+from alloist_enforce import create_enforcement
 
 enforcement = create_enforcement(
     api_url="http://localhost:8000",

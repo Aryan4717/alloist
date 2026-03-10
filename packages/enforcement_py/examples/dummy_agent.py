@@ -11,7 +11,7 @@ Prerequisites:
 import os
 import sys
 
-from cognara_enforce import create_enforcement
+from alloist_enforce import create_enforcement
 
 
 def run_agent(token: str) -> None:

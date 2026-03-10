@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alloist.github.io/spec/schemas/evidence_bundle.json",
+  "title": "ACT-lite Evidence Bundle",
+  "description": "Signed evidence record for enforcement events",
+  "type": "object",
+  "required": [
+    "evidence_id",
+    "action_name",
+    "token_snapshot",
+    "timestamp",
+    "input_hash",
+    "result",
+    "runtime_signature",
+    "public_key"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique evidence record ID"
+    },
+    "action_name": {
+      "type": "string",
+      "description": "Action identifier (e.g. gmail.send, stripe.charge)"
+    },
+    "token_snapshot": {
+      "type": "object",
+      "description": "Snapshot of token claims at evaluation time"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA256 hex of canonical JSON of action_name + token_snapshot + metadata"
+    },
+    "policy_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Policy that matched (if any)"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["allow", "deny"],
+      "description": "Enforcement result"
+    },
+    "runtime_metadata": {
+      "type": "object",
+      "description": "Additional context"
+    },
+    "public_key": {
+      "type": "string",
+      "description": "Base64 Ed25519 public key for verification"
+    },
+    "runtime_signature": {
+      "type": "string",
+      "description": "Base64 Ed25519 signature over canonical bundle (excluding this field)"
+    }
+  }
+}

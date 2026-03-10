@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from cognara_enforce.api import validate_token_remote
+from alloist_enforce.api import validate_token_remote
 
 
 def test_returns_data_when_api_valid() -> None:

@@ -9,13 +9,13 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-# Ensure cognara_enforce is importable when run directly
+# Ensure alloist_enforce is importable when run directly
 _repo_root = Path(__file__).resolve().parents[3]
 _enforcement_path = _repo_root / "packages" / "enforcement_py"
 if _enforcement_path.exists():
     sys.path.insert(0, str(_enforcement_path))
 
-from cognara_enforce import create_enforcement
+from alloist_enforce import create_enforcement
 
 
 def run_agent(

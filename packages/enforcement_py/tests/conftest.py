@@ -1,4 +1,4 @@
-"""Pytest fixtures for cognara_enforce tests."""
+"""Pytest fixtures for alloist_enforce tests."""
 
 import base64
 import time
