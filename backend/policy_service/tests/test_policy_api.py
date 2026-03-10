@@ -233,8 +233,12 @@ def test_evaluate_invalid_token(client: TestClient) -> None:
 
 def test_list_policies(client: TestClient) -> None:
     """GET /policy returns list of policies."""
+    from uuid import UUID
+
+    default_org = UUID("00000000-0000-0000-0000-000000000001")
     policy = Policy(
         id=uuid4(),
+        org_id=default_org,
         name="Test policy",
         description="Test",
         rules={"effect": "deny", "match": {}, "conditions": []},
@@ -244,7 +248,7 @@ def test_list_policies(client: TestClient) -> None:
     from app.api.deps import get_db
 
     mock_db = MagicMock()
-    mock_db.query.return_value.all.return_value = [policy]
+    mock_db.query.return_value.filter.return_value.all.return_value = [policy]
 
     def override_get_db():
         yield mock_db

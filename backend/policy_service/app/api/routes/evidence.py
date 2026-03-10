@@ -4,7 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, verify_api_key
+from app.api.deps import OrgContext, get_db, require_role
+from app.models import OrgRole
 from app.schemas.evidence import (
     CreateEvidenceRequest,
     CreateEvidenceResponse,
@@ -24,6 +25,9 @@ from app.services.evidence_service import (
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
+ROLE_READ = require_role(OrgRole.admin, OrgRole.developer, OrgRole.viewer)
+ROLE_WRITE = require_role(OrgRole.admin, OrgRole.developer)
+
 
 @router.get("", response_model=EvidenceListResponse)
 def list_evidence_endpoint(
@@ -32,7 +36,7 @@ def list_evidence_endpoint(
     since: str | None = None,
     limit: int = 50,
     offset: int = 0,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> EvidenceListResponse:
     """List evidence with optional filters. since: ISO8601 datetime string."""
@@ -43,7 +47,13 @@ def list_evidence_endpoint(
         except ValueError:
             pass
     items, total = list_evidence(
-        db, result=result, action_name=action_name, since=since_dt, limit=limit, offset=offset
+        db,
+        org_id=ctx.org_id,
+        result=result,
+        action_name=action_name,
+        since=since_dt,
+        limit=limit,
+        offset=offset,
     )
     return EvidenceListResponse(
         items=[
@@ -64,12 +74,13 @@ def list_evidence_endpoint(
 @router.post("/create", response_model=CreateEvidenceResponse)
 def create_evidence_endpoint(
     body: CreateEvidenceRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_WRITE,
     db: Session = Depends(get_db),
 ) -> CreateEvidenceResponse:
     """Create and store signed evidence record."""
     create_evidence(
         db=db,
+        org_id=ctx.org_id,
         evidence_id=body.evidence_id,
         action_name=body.action_name,
         token_snapshot=body.token_snapshot,
@@ -83,11 +94,11 @@ def create_evidence_endpoint(
 @router.post("/export", response_model=ExportEvidenceResponse)
 def export_evidence_endpoint(
     body: ExportEvidenceRequest,
-    _: None = Depends(verify_api_key),
+    ctx: OrgContext = ROLE_READ,
     db: Session = Depends(get_db),
 ) -> ExportEvidenceResponse:
     """Export signed evidence bundle for auditors."""
-    evidence = get_evidence(db, body.evidence_id)
+    evidence = get_evidence(db, ctx.org_id, body.evidence_id)
     if not evidence:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -104,7 +115,7 @@ def export_evidence_endpoint(
 
 @router.get("/keys", response_model=EvidenceKeysResponse)
 def get_evidence_keys(
-    _: None = Depends(verify_api_key),
+    _: OrgContext = ROLE_READ,
 ) -> EvidenceKeysResponse:
     """Get public key for evidence signature verification."""
     return EvidenceKeysResponse(public_key=get_public_key_b64())

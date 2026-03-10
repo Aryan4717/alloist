@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { exportEvidence, listEvidence, type EvidenceItem } from "@/lib/api";
-import { useApiKey } from "@/components/ApiKeyProvider";
-import { ApiKeyConfig } from "@/components/ApiKeyConfig";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function ExportsPage() {
-  const { apiKey, isConfigured } = useApiKey();
+  const { jwt, orgId, isConfigured } = useAuth();
+  const auth = { jwt, orgId };
   const [items, setItems] = useState<EvidenceItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ export default function ExportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await listEvidence(apiKey, { limit: 100 });
+      const res = await listEvidence(auth, { limit: 100 });
       setItems(res.items);
       setTotal(res.total);
     } catch (e) {
@@ -26,7 +26,7 @@ export default function ExportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, isConfigured]);
+  }, [jwt, orgId, isConfigured]);
 
   useEffect(() => {
     fetchEvidence();
@@ -36,7 +36,7 @@ export default function ExportsPage() {
     if (!isConfigured) return;
     setExporting(e.id);
     try {
-      const data = await exportEvidence(apiKey, e.id);
+      const data = await exportEvidence(auth, e.id);
       const blob = new Blob(
         [
           JSON.stringify(
@@ -68,7 +68,6 @@ export default function ExportsPage() {
 
   return (
     <div>
-      <ApiKeyConfig />
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Evidence Exports

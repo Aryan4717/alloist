@@ -7,11 +7,11 @@ import {
   revokeToken,
   type TokenMetadata,
 } from "@/lib/api";
-import { useApiKey } from "@/components/ApiKeyProvider";
-import { ApiKeyConfig } from "@/components/ApiKeyConfig";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function TokensPage() {
-  const { apiKey, isConfigured } = useApiKey();
+  const { jwt, orgId, isConfigured } = useAuth();
+  const auth = { jwt, orgId };
   const [tokens, setTokens] = useState<TokenMetadata[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function TokensPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await listTokens(apiKey, { limit: 100 });
+      const res = await listTokens(auth, { limit: 100 });
       setTokens(res.items);
       setTotal(res.total);
     } catch (e) {
@@ -35,7 +35,7 @@ export default function TokensPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, isConfigured]);
+  }, [jwt, orgId, isConfigured]);
 
   useEffect(() => {
     fetchTokens();
@@ -47,7 +47,7 @@ export default function TokensPage() {
     setCreating(true);
     setError(null);
     try {
-      await createToken(apiKey, {
+      await createToken(auth, {
         subject: subject.trim(),
         scopes: scopes ? scopes.split(",").map((s) => s.trim()) : [],
         ttl_seconds: ttl,
@@ -67,7 +67,7 @@ export default function TokensPage() {
   const handleRevoke = async (id: string) => {
     if (!isConfigured || !confirm("Revoke this token?")) return;
     try {
-      await revokeToken(apiKey, id);
+      await revokeToken(auth, id);
       fetchTokens();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to revoke");
@@ -79,7 +79,6 @@ export default function TokensPage() {
 
   return (
     <div>
-      <ApiKeyConfig />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">

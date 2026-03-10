@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { listEvidence, type EvidenceItem } from "@/lib/api";
-import { useApiKey } from "@/components/ApiKeyProvider";
-import { ApiKeyConfig } from "@/components/ApiKeyConfig";
+import { useAuth } from "@/components/AuthProvider";
 
 const POLL_INTERVAL_MS = 5000;
 
 export default function LiveActionsPage() {
-  const { apiKey, isConfigured } = useApiKey();
+  const { jwt, orgId, isConfigured } = useAuth();
+  const auth = { jwt, orgId };
   const [items, setItems] = useState<EvidenceItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export default function LiveActionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await listEvidence(apiKey, {
+      const res = await listEvidence(auth, {
         result: filterResult || undefined,
         action_name: filterAction || undefined,
         limit: 100,
@@ -33,7 +33,7 @@ export default function LiveActionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, isConfigured, filterResult, filterAction]);
+  }, [jwt, orgId, isConfigured, filterResult, filterAction]);
 
   useEffect(() => {
     fetchEvidence();
@@ -54,7 +54,6 @@ export default function LiveActionsPage() {
 
   return (
     <div>
-      <ApiKeyConfig />
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">

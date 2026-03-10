@@ -2,12 +2,24 @@ const TOKEN_URL =
   process.env.NEXT_PUBLIC_TOKEN_SERVICE_URL || "http://localhost:8000";
 const POLICY_URL =
   process.env.NEXT_PUBLIC_POLICY_SERVICE_URL || "http://localhost:8001";
+const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
-function headers(apiKey: string) {
-  return {
+export interface Auth {
+  jwt: string;
+  orgId?: string | null;
+}
+
+function authHeaders(auth: Auth) {
+  const h: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-API-Key": apiKey,
+    Authorization: `Bearer ${auth.jwt}`,
   };
+  if (auth.orgId) {
+    h["X-Org-Id"] = auth.orgId;
+  } else {
+    h["X-Org-Id"] = DEFAULT_ORG_ID;
+  }
+  return h;
 }
 
 export interface TokenMetadata {
@@ -66,7 +78,7 @@ export interface ExportBundle {
 }
 
 export async function listTokens(
-  apiKey: string,
+  auth: Auth,
   opts?: { status?: string; subject?: string; limit?: number; offset?: number }
 ): Promise<TokenListResponse> {
   const params = new URLSearchParams();
@@ -75,19 +87,19 @@ export async function listTokens(
   if (opts?.limit) params.set("limit", String(opts.limit));
   if (opts?.offset) params.set("offset", String(opts.offset));
   const res = await fetch(`${TOKEN_URL}/tokens?${params}`, {
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function createToken(
-  apiKey: string,
+  auth: Auth,
   body: { subject: string; scopes?: string[]; ttl_seconds?: number }
 ): Promise<{ token: string; token_id: string; expires_at: string }> {
   const res = await fetch(`${TOKEN_URL}/tokens`, {
     method: "POST",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
     body: JSON.stringify({
       subject: body.subject,
       scopes: body.scopes ?? [],
@@ -99,27 +111,27 @@ export async function createToken(
 }
 
 export async function revokeToken(
-  apiKey: string,
+  auth: Auth,
   tokenId: string
 ): Promise<void> {
   const res = await fetch(`${TOKEN_URL}/tokens/revoke`, {
     method: "POST",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
     body: JSON.stringify({ token_id: tokenId }),
   });
   if (!res.ok) throw new Error(await res.text());
 }
 
-export async function listPolicies(apiKey: string): Promise<Policy[]> {
+export async function listPolicies(auth: Auth): Promise<Policy[]> {
   const res = await fetch(`${POLICY_URL}/policy`, {
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function createPolicy(
-  apiKey: string,
+  auth: Auth,
   body: {
     name: string;
     description?: string;
@@ -129,7 +141,7 @@ export async function createPolicy(
 ): Promise<Policy> {
   const res = await fetch(`${POLICY_URL}/policy`, {
     method: "POST",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -137,7 +149,7 @@ export async function createPolicy(
 }
 
 export async function updatePolicy(
-  apiKey: string,
+  auth: Auth,
   id: string,
   body: {
     name: string;
@@ -148,7 +160,7 @@ export async function updatePolicy(
 ): Promise<Policy> {
   const res = await fetch(`${POLICY_URL}/policy/${id}`, {
     method: "PUT",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -156,12 +168,12 @@ export async function updatePolicy(
 }
 
 export async function compilePolicyDsl(
-  apiKey: string,
+  auth: Auth,
   payload: { rules: DslRule[] }
 ): Promise<CompileDslResponse> {
   const res = await fetch(`${POLICY_URL}/policy/compile_dsl`, {
     method: "POST",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -169,18 +181,18 @@ export async function compilePolicyDsl(
 }
 
 export async function deletePolicy(
-  apiKey: string,
+  auth: Auth,
   id: string
 ): Promise<void> {
   const res = await fetch(`${POLICY_URL}/policy/${id}`, {
     method: "DELETE",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
   });
   if (!res.ok) throw new Error(await res.text());
 }
 
 export async function listEvidence(
-  apiKey: string,
+  auth: Auth,
   opts?: {
     result?: string;
     action_name?: string;
@@ -196,19 +208,19 @@ export async function listEvidence(
   if (opts?.limit) params.set("limit", String(opts.limit));
   if (opts?.offset) params.set("offset", String(opts.offset));
   const res = await fetch(`${POLICY_URL}/evidence?${params}`, {
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function exportEvidence(
-  apiKey: string,
+  auth: Auth,
   evidenceId: string
 ): Promise<ExportBundle> {
   const res = await fetch(`${POLICY_URL}/evidence/export`, {
     method: "POST",
-    headers: headers(apiKey),
+    headers: authHeaders(auth),
     body: JSON.stringify({ evidence_id: evidenceId }),
   });
   if (!res.ok) throw new Error(await res.text());

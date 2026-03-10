@@ -1,7 +1,7 @@
 """Unit tests for policy evaluation logic."""
 
 from unittest.mock import MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -89,11 +89,13 @@ def test_evaluate_conditions_not_contains() -> None:
 
 def test_evaluate_returns_deny_when_condition_met() -> None:
     """stripe.charge amount 1500 triggers deny."""
-    token_id = uuid4()
     from datetime import datetime, timezone
 
+    org_id = UUID("00000000-0000-0000-0000-000000000001")
+    token_id = uuid4()
     mock_token = TokenRef(
         id=token_id,
+        org_id=org_id,
         subject="user1",
         scopes=["payments"],
         issued_at=datetime.now(timezone.utc),
@@ -104,6 +106,7 @@ def test_evaluate_returns_deny_when_condition_met() -> None:
     )
     policy = Policy(
         id=uuid4(),
+        org_id=org_id,
         name="Block large Stripe charges",
         description="Deny stripe.charge when amount > 1000",
         rules={
@@ -117,10 +120,12 @@ def test_evaluate_returns_deny_when_condition_met() -> None:
     )
 
     mock_db = MagicMock()
-    mock_db.get.return_value = mock_token
-    mock_db.query.return_value.all.return_value = [policy]
+    mock_q = MagicMock()
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_token
+    mock_db.query.return_value.filter.return_value.all.return_value = [policy]
 
     result = evaluate(
+        org_id=org_id,
         token_id=token_id,
         action={
             "service": "stripe",
@@ -138,11 +143,13 @@ def test_evaluate_returns_deny_when_condition_met() -> None:
 
 def test_evaluate_returns_allow_when_no_match() -> None:
     """Unrelated action passes."""
-    token_id = uuid4()
     from datetime import datetime, timezone
 
+    org_id = UUID("00000000-0000-0000-0000-000000000001")
+    token_id = uuid4()
     mock_token = TokenRef(
         id=token_id,
+        org_id=org_id,
         subject="user1",
         scopes=[],
         issued_at=datetime.now(timezone.utc),
@@ -153,6 +160,7 @@ def test_evaluate_returns_allow_when_no_match() -> None:
     )
     policy = Policy(
         id=uuid4(),
+        org_id=org_id,
         name="Block large Stripe charges",
         description="",
         rules={
@@ -166,10 +174,11 @@ def test_evaluate_returns_allow_when_no_match() -> None:
     )
 
     mock_db = MagicMock()
-    mock_db.get.return_value = mock_token
-    mock_db.query.return_value.all.return_value = [policy]
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_token
+    mock_db.query.return_value.filter.return_value.all.return_value = [policy]
 
     result = evaluate(
+        org_id=org_id,
         token_id=token_id,
         action={
             "service": "paypal",
@@ -186,11 +195,13 @@ def test_evaluate_returns_allow_when_no_match() -> None:
 
 def test_evaluate_returns_allow_when_condition_not_met() -> None:
     """stripe.charge amount 500 passes (below threshold)."""
-    token_id = uuid4()
     from datetime import datetime, timezone
 
+    org_id = UUID("00000000-0000-0000-0000-000000000001")
+    token_id = uuid4()
     mock_token = TokenRef(
         id=token_id,
+        org_id=org_id,
         subject="user1",
         scopes=[],
         issued_at=datetime.now(timezone.utc),
@@ -201,6 +212,7 @@ def test_evaluate_returns_allow_when_condition_not_met() -> None:
     )
     policy = Policy(
         id=uuid4(),
+        org_id=org_id,
         name="Block large Stripe charges",
         description="",
         rules={
@@ -214,10 +226,11 @@ def test_evaluate_returns_allow_when_condition_not_met() -> None:
     )
 
     mock_db = MagicMock()
-    mock_db.get.return_value = mock_token
-    mock_db.query.return_value.all.return_value = [policy]
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_token
+    mock_db.query.return_value.filter.return_value.all.return_value = [policy]
 
     result = evaluate(
+        org_id=org_id,
         token_id=token_id,
         action={
             "service": "stripe",
@@ -233,11 +246,13 @@ def test_evaluate_returns_allow_when_condition_not_met() -> None:
 
 def test_evaluate_invalid_token_returns_deny() -> None:
     """Returns deny when token not found."""
+    org_id = UUID("00000000-0000-0000-0000-000000000001")
     token_id = uuid4()
     mock_db = MagicMock()
-    mock_db.get.return_value = None
+    mock_db.query.return_value.filter.return_value.first.return_value = None
 
     result = evaluate(
+        org_id=org_id,
         token_id=token_id,
         action={"service": "stripe", "name": "charge", "metadata": {}},
         db=mock_db,
@@ -249,11 +264,13 @@ def test_evaluate_invalid_token_returns_deny() -> None:
 
 def test_evaluate_revoked_token_returns_deny() -> None:
     """Returns deny when token is revoked."""
-    token_id = uuid4()
     from datetime import datetime, timezone
 
+    org_id = UUID("00000000-0000-0000-0000-000000000001")
+    token_id = uuid4()
     mock_token = TokenRef(
         id=token_id,
+        org_id=org_id,
         subject="user1",
         scopes=[],
         issued_at=datetime.now(timezone.utc),
@@ -264,10 +281,11 @@ def test_evaluate_revoked_token_returns_deny() -> None:
     )
 
     mock_db = MagicMock()
-    mock_db.get.return_value = mock_token
-    mock_db.query.return_value.all.return_value = []
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_token
+    mock_db.query.return_value.filter.return_value.all.return_value = []
 
     result = evaluate(
+        org_id=org_id,
         token_id=token_id,
         action={"service": "stripe", "name": "charge", "metadata": {}},
         db=mock_db,

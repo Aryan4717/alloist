@@ -11,7 +11,14 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base
-from app.models import Token, SigningKey  # noqa: F401 - import for metadata
+from app.models import (  # noqa: F401 - import for metadata
+    Token,
+    SigningKey,
+    Organization,
+    User,
+    OrganizationUser,
+    ApiKey,
+)
 from app.config import get_settings
 
 # this is the Alembic Config object, which provides

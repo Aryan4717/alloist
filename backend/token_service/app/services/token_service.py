@@ -17,6 +17,7 @@ class TokenNotFoundError(Exception):
 
 def mint_token(
     db: Session,
+    org_id: UUID,
     subject: str,
     scopes: list[str],
     ttl_seconds: int,
@@ -35,6 +36,7 @@ def mint_token(
     )
 
     token_row = Token(
+        org_id=org_id,
         subject=subject,
         scopes=scopes,
         issued_at=issued_at,
@@ -61,9 +63,9 @@ def mint_token(
     return token_value, token_row.id, expires_at
 
 
-def revoke_token(db: Session, token_id: UUID) -> bool:
+def revoke_token(db: Session, org_id: UUID, token_id: UUID) -> bool:
     """Revoke a token by id. Returns True if revoked."""
-    token_row = db.query(Token).filter(Token.id == token_id).first()
+    token_row = db.query(Token).filter(Token.id == token_id, Token.org_id == org_id).first()
     if not token_row:
         raise TokenNotFoundError(f"Token not found: {token_id}")
 
@@ -72,20 +74,21 @@ def revoke_token(db: Session, token_id: UUID) -> bool:
     return True
 
 
-def get_token_metadata(db: Session, token_id: UUID) -> Token | None:
+def get_token_metadata(db: Session, org_id: UUID, token_id: UUID) -> Token | None:
     """Get token metadata by id. Returns None if not found. Excludes token_value."""
-    return db.query(Token).filter(Token.id == token_id).first()
+    return db.query(Token).filter(Token.id == token_id, Token.org_id == org_id).first()
 
 
 def list_tokens(
     db: Session,
+    org_id: UUID,
     status: str | None = None,
     subject: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[Token], int]:
     """List tokens with optional filters. Returns (items, total)."""
-    q = db.query(Token)
+    q = db.query(Token).filter(Token.org_id == org_id)
     if status:
         try:
             st = TokenStatus(status)
