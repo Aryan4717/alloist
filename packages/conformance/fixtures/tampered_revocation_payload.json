@@ -1,0 +1,8 @@
+{
+  "token_id": "tampered",
+  "event": "revoked",
+  "ts": "2026-03-09T16:19:17.949Z",
+  "nonce": "56056af0-0be6-4229-ab96-4694f332423a",
+  "kid": "revocation",
+  "signature": "k+Hg2wU9CbZBwSrsdwniHgryRkXILrwCcJ/sZwXWn6Asy6l37gYozYn0TqBxX4LP/FdLLzZ2KKn3TfgZS0G1Aw=="
+}

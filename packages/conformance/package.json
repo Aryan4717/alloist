@@ -1,0 +1,17 @@
+{
+  "name": "@alloist/conformance",
+  "version": "0.1.0",
+  "description": "ACT-lite conformance test harness",
+  "private": true,
+  "scripts": {
+    "generate": "node scripts/generate_fixtures.js",
+    "test": "node runner.js",
+    "test:node": "node runner.js --sdk node",
+    "test:py": "node runner.js --sdk py"
+  },
+  "dependencies": {
+    "@alloist/ref-sdk-node": "file:../ref-sdk-node",
+    "jose": "^5.9.6",
+    "ws": "^8.18.0"
+  }
+}
