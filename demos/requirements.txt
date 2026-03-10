@@ -1,0 +1,4 @@
+httpx>=0.26
+# From repo root: pip install -r demos/requirements.txt
+# Installs enforcement_py and its deps (pyjwt, cryptography, websocket-client)
+-e packages/enforcement_py
