@@ -168,3 +168,8 @@ See [docs/pilot.md](docs/pilot.md) for details and [docs/pilot-integration.md](d
 
 - **[LangChain](docs/integrations/langchain.md)** — Wrap tools with `createEnforcement` before execution.
 - **[Cursor](docs/integrations/cursor.md)** — Cursor rules and pre-action hooks for token verification.
+
+
+
+
+
