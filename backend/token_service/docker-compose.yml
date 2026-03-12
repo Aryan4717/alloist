@@ -30,6 +30,7 @@ services:
       context: ../..
       dockerfile: backend/token_service/Dockerfile
     restart: unless-stopped
+    env_file: ../../.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
       REDIS_URL: redis://redis:6379/0
@@ -48,8 +49,10 @@ services:
     build:
       context: ../..
       dockerfile: backend/policy_service/Dockerfile
+    env_file: ../../.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/token_service
+      TOKEN_SERVICE_URL: http://token_service:8000
       POLICY_SERVICE_API_KEY: ${POLICY_SERVICE_API_KEY:-dev-api-key}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
     ports:
