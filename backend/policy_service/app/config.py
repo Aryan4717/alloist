@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Non-secret config
     AUDIT_CLEANUP_INTERVAL_SEC: int = 3600
     JWT_ALGORITHM: str = "HS256"
+    TOKEN_SERVICE_URL: str = "http://localhost:8000"
 
     # Secret fields - loaded via secrets.get() on access
     @property
