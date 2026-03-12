@@ -1,6 +1,6 @@
 """Enforce endpoint: Bearer capability token + action -> allow/deny."""
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.models.token_ref import TokenRef, TokenStatus
 from app.services.evaluator import evaluate
+from app.services.evidence_service import create_evidence
 
 
 def get_db() -> Session:
@@ -142,6 +143,33 @@ def enforce(
         },
         db=db,
     )
+
+    # Create evidence record for Live Actions and Evidence Exports (allow and deny)
+    try:
+        kid = "unknown"
+        try:
+            header = jwt.get_unverified_header(token)
+            kid = header.get("kid") or "unknown"
+        except Exception:
+            pass
+        token_snapshot = {
+            "kid": kid,
+            "token_id": str(jti),
+            "scopes": token_row.scopes if token_row.scopes is not None else [],
+        }
+        result_str = "deny" if not result.allowed else "allow"
+        create_evidence(
+            db=db,
+            org_id=org_id,
+            evidence_id=uuid4(),
+            action_name=body.action,
+            token_snapshot=token_snapshot,
+            policy_id=result.policy_id,
+            result=result_str,
+            runtime_metadata={"metadata": body.metadata},
+        )
+    except Exception:
+        pass  # Don't fail allow/deny if evidence creation fails
 
     if not result.allowed:
         raise HTTPException(
