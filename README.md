@@ -123,6 +123,16 @@ Phase 8 adds documentation, demo scripts, and the pilot kit for easy adoption an
 - 8.3 Pilot kit (docker-compose, start.sh, examples, integration guides)
 - Full testing checklist
 
+## Phase 9
+
+Phase 9 delivers developer-friendly SDKs and agent examples for quick integration.
+
+**See [PHASE9_README.md](PHASE9_README.md) for:**
+- 9.1 Python developer SDK (init, enforce, AlloistPolicyDeniedError)
+- 9.2 Node.js developer SDK (init, enforce, TypeScript types)
+- 9.3 Agent examples (email_agent, booking_agent, github_agent)
+- Full testing checklist
+
 ## ACT-lite Spec (alloist/spec)
 
 The [spec/](spec/) directory contains the **Agent Capability Token (ACT-lite)** specification: token fields, evidence format, revocation semantics, key rotation, and verification steps. Includes JSON schemas, conformance tests, security recommendations, and examples. May be published as **alloist/spec**.
