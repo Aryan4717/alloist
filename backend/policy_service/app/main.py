@@ -9,7 +9,7 @@ from sqlalchemy import text
 from alloist_logging import logging_middleware
 from alloist_metrics import get_metrics_output, health_router, metrics_middleware
 
-from app.api.routes import audit, consent, evidence, policy
+from app.api.routes import audit, consent, enforce, evidence, policy
 from app.config import get_settings
 from app.database import SessionLocal, engine
 
@@ -74,6 +74,7 @@ def metrics():
 
 
 app.include_router(health_router(check_ready=_check_ready))
+app.include_router(enforce.router)
 app.include_router(policy.router)
 app.include_router(consent.router)
 app.include_router(evidence.router)
