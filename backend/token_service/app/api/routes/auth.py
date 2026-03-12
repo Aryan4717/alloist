@@ -18,8 +18,9 @@ from app.auth.oauth import (
     exchange_google_code,
     generate_state,
 )
+from app.auth.domain_utils import get_email_domain, is_personal_domain
 from app.config import get_settings
-from app.models import Organization, OrganizationUser, User, UserOAuthIdentity
+from app.models import Organization, OrganizationUser, OrgRole, User, UserOAuthIdentity
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger("token_service")
@@ -85,6 +86,41 @@ def _get_user_orgs(db: Session, user_id) -> list[dict]:
     ]
 
 
+def _get_or_create_personal_org(db: Session, user: User) -> Organization:
+    """Create org for user signing up with personal email."""
+    name = f"{user.name}'s Workspace" if user.name else f"{user.email.split('@')[0]}'s Workspace"
+    org = Organization(name=name, allowed_domain=None)
+    db.add(org)
+    db.flush()
+    return org
+
+
+def _ensure_user_has_org(db: Session, user: User) -> None:
+    """Assign user to org when they have none. Personal email -> admin; org email -> developer."""
+    domain = get_email_domain(user.email)
+    if not domain:
+        org = _get_or_create_personal_org(db, user)
+        ou = OrganizationUser(user_id=user.id, org_id=org.id, role=OrgRole.admin)
+        db.add(ou)
+        db.commit()
+        return
+
+    if is_personal_domain(user.email):
+        org = _get_or_create_personal_org(db, user)
+        ou = OrganizationUser(user_id=user.id, org_id=org.id, role=OrgRole.admin)
+        db.add(ou)
+    else:
+        org = db.query(Organization).filter(Organization.allowed_domain == domain).first()
+        if org:
+            ou = OrganizationUser(user_id=user.id, org_id=org.id, role=OrgRole.developer)
+            db.add(ou)
+        else:
+            org = _get_or_create_personal_org(db, user)
+            ou = OrganizationUser(user_id=user.id, org_id=org.id, role=OrgRole.admin)
+            db.add(ou)
+    db.commit()
+
+
 @router.get("/google/login")
 def google_login() -> RedirectResponse:
     """Redirect to Google OAuth."""
@@ -140,6 +176,9 @@ async def google_callback(
         db, "google", provider_user_id, email, name
     )
     orgs = _get_user_orgs(db, user.id)
+    if not orgs:
+        _ensure_user_has_org(db, user)
+        orgs = _get_user_orgs(db, user.id)
 
     org_id: UUID | None = None
     role = None
@@ -227,6 +266,9 @@ async def github_callback(
         db, "github", provider_user_id, email, name
     )
     orgs = _get_user_orgs(db, user.id)
+    if not orgs:
+        _ensure_user_has_org(db, user)
+        orgs = _get_user_orgs(db, user.id)
 
     org_id: UUID | None = None
     role = None
