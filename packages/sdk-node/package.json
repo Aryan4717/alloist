@@ -1,0 +1,29 @@
+{
+  "name": "@alloist/sdk",
+  "version": "0.1.0",
+  "description": "Node.js SDK for Alloist policy enforcement - gate AI agent actions with one line of code",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test tests/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["alloist", "policy", "enforcement", "ai", "agents"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": ["dist"],
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}
